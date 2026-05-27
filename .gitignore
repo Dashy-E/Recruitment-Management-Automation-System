@@ -1,12 +1,10 @@
-node_modules
-.next
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
 .env
 .env.local
-dist
-coverage
 *.log
-node_modules/
-dist/
-.env
+coverage/
 __pycache__/
 venv/
