@@ -1,0 +1,372 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String
+  firstName    String
+  lastName     String
+  role         String    @default("RECRUITER")
+  departmentId String?
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  department            Department?           @relation(fields: [departmentId], references: [id])
+  mrfCreated            MRF[]                 @relation("MRFCreator")
+  mrfApproved           MRF[]                 @relation("MRFApprover")
+  candidatesAdded       Candidate[]           @relation("CandidateAdder")
+  interviewsScheduled   Interview[]           @relation("InterviewScheduler")
+  interviewFeedback     InterviewFeedback[]
+  trainingBatchesManaged TrainingBatch[]      @relation("BatchManager")
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+  candidateComments     CandidateComment[]
+}
+
+model Department {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  users User[]
+  mrfs  MRF[]
+}
+
+model MRF {
+  id               String    @id @default(cuid())
+  mrfNumber        String    @unique
+  departmentId     String
+  designation      String
+  vacancies        Int
+  experience       String
+  skills           String    @default("[]")
+  salaryMin        Float?
+  salaryMax        Float?
+  location         String?
+  branch           String?
+  country          String    @default("India")
+  reportingManager String?
+  status           String    @default("DRAFT")
+  priority         String    @default("NORMAL")
+  description      String?
+  createdById      String
+  approvedById     String?
+  approvedAt       DateTime?
+  rejectionReason  String?
+  closedAt         DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  department Department  @relation(fields: [departmentId], references: [id])
+  createdBy  User        @relation("MRFCreator", fields: [createdById], references: [id])
+  approvedBy User?       @relation("MRFApprover", fields: [approvedById], references: [id])
+  candidates Candidate[]
+}
+
+model Candidate {
+  id              String    @id @default(cuid())
+  candidateId     String    @unique
+  firstName       String
+  lastName        String
+  email           String    @unique
+  phone           String
+  alternatePhone  String?
+  dateOfBirth     DateTime?
+  gender          String?
+  address         String?
+  city            String?
+  country         String?
+  designation     String
+  experience      Int       @default(0)
+  currentSalary   Float?
+  expectedSalary  Float?
+  noticePeriod    Int?
+  skills          String    @default("[]")
+  education       String    @default("[]")
+  certifications  String    @default("[]")
+  currentCompany  String?
+  resumePath      String?
+  status          String    @default("APPLIED")
+  source          String?
+  mrfId           String?
+  addedById       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  mrf                MRF?                @relation(fields: [mrfId], references: [id])
+  addedBy            User                @relation("CandidateAdder", fields: [addedById], references: [id])
+  documents          CandidateDocument[]
+  comments           CandidateComment[]
+  interviews         Interview[]
+  assessments        Assessment[]
+  trainingEnrollment TrainingEnrollment?
+  examAttempts       ExamAttempt[]
+  offerLetter        OfferLetter?
+  appointmentLetter  AppointmentLetter?
+  probation          Probation?
+}
+
+model CandidateDocument {
+  id          String    @id @default(cuid())
+  candidateId String
+  docType     String
+  fileName    String
+  filePath    String
+  fileSize    Int?
+  mimeType    String?
+  verified    Boolean   @default(false)
+  uploadedAt  DateTime  @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model CandidateComment {
+  id            String    @id @default(cuid())
+  candidateId   String
+  comment       String
+  commentedById String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  commentedBy User      @relation(fields: [commentedById], references: [id])
+}
+
+model Interview {
+  id            String    @id @default(cuid())
+  candidateId   String
+  round         Int       @default(1)
+  interviewType String    @default("TECHNICAL")
+  scheduledAt   DateTime
+  duration      Int?
+  mode          String    @default("ONLINE")
+  location      String?
+  meetingLink   String?
+  status        String    @default("SCHEDULED")
+  scheduledById String
+  panelIds      String    @default("[]")
+  notes         String?
+  cancelReason  String?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  candidate   Candidate           @relation(fields: [candidateId], references: [id])
+  scheduledBy User                @relation("InterviewScheduler", fields: [scheduledById], references: [id])
+  feedback    InterviewFeedback[]
+}
+
+model InterviewFeedback {
+  id                  String    @id @default(cuid())
+  interviewId         String
+  interviewerId       String
+  technicalScore      Int?
+  communicationScore  Int?
+  problemSolvingScore Int?
+  cultureFitScore     Int?
+  overallScore        Float?
+  recommendation      String?
+  strengths           String?
+  weaknesses          String?
+  comments            String?
+  createdAt           DateTime  @default(now())
+
+  interview   Interview @relation(fields: [interviewId], references: [id])
+  interviewer User      @relation(fields: [interviewerId], references: [id])
+}
+
+model Assessment {
+  id             String    @id @default(cuid())
+  candidateId    String
+  assessmentType String
+  testName       String
+  maxScore       Int
+  obtainedScore  Int?
+  passingScore   Int
+  status         String    @default("PENDING")
+  link           String?
+  completedAt    DateTime?
+  remarks        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model TrainingBatch {
+  id          String    @id @default(cuid())
+  batchName   String
+  batchCode   String    @unique
+  designation String
+  startDate   DateTime
+  endDate     DateTime
+  maxCapacity Int
+  trainer     String?
+  location    String?
+  status      String    @default("UPCOMING")
+  managedById String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  managedBy   User                 @relation("BatchManager", fields: [managedById], references: [id])
+  enrollments TrainingEnrollment[]
+  attendance  TrainingAttendance[]
+}
+
+model TrainingEnrollment {
+  id             String    @id @default(cuid())
+  candidateId    String    @unique
+  batchId        String
+  enrolledAt     DateTime  @default(now())
+  status         String    @default("ENROLLED")
+  completionDate DateTime?
+  remarks        String?
+  completedBy    String?
+
+  candidate Candidate     @relation(fields: [candidateId], references: [id])
+  batch     TrainingBatch @relation(fields: [batchId], references: [id])
+}
+
+model TrainingAttendance {
+  id          String    @id @default(cuid())
+  batchId     String
+  candidateId String
+  date        DateTime
+  present     Boolean   @default(false)
+  remarks     String?
+  markedBy    String?
+  markedAt    DateTime  @default(now())
+
+  batch TrainingBatch @relation(fields: [batchId], references: [id])
+
+  @@unique([batchId, candidateId, date])
+}
+
+model ExamAttempt {
+  id            String    @id @default(cuid())
+  candidateId   String
+  examName      String
+  examLink      String?
+  linkToken     String    @unique @default(cuid())
+  linkExpiresAt DateTime?
+  attemptNumber Int       @default(1)
+  status        String    @default("PENDING")
+  score         Float?
+  passingScore  Float?
+  maxScore      Float?
+  sentAt        DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  result        String?
+  remarks       String?
+  generatedById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model OfferLetter {
+  id              String    @id @default(cuid())
+  candidateId     String    @unique
+  offerNumber     String    @unique
+  designation     String
+  department      String
+  joiningDate     DateTime?
+  expiryDate      DateTime
+  basicSalary     Float
+  hra             Float?
+  allowances      String    @default("[]")
+  deductions      String    @default("[]")
+  grossSalary     Float
+  netSalary       Float
+  ctc             Float
+  status          String    @default("DRAFT")
+  pdfPath         String?
+  approvedById    String?
+  approvedAt      DateTime?
+  sentAt          DateTime?
+  respondedAt     DateTime?
+  rejectionReason String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model AppointmentLetter {
+  id                String    @id @default(cuid())
+  candidateId       String    @unique
+  appointmentNumber String    @unique
+  designation       String
+  department        String
+  joiningDate       DateTime
+  probationPeriod   Int       @default(180)
+  pdfPath           String?
+  generatedAt       DateTime  @default(now())
+  sentAt            DateTime?
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model Probation {
+  id                     String    @id @default(cuid())
+  candidateId            String    @unique
+  startDate              DateTime
+  endDate                DateTime
+  extendedEndDate        DateTime?
+  status                 String    @default("ONGOING")
+  reviewDate             DateTime?
+  branchManagerApproval  String?
+  countryManagerApproval String?
+  mdApproval             String?
+  remarks                String?
+  extensionReason        String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String
+  message   String
+  type      String    @default("INFO")
+  read      Boolean   @default(false)
+  link      String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  oldValue  String?
+  newValue  String?
+  ipAddress String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
