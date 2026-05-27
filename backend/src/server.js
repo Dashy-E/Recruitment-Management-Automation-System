@@ -20,6 +20,13 @@ import reportRoutes from './routes/reports.js';
 import userRoutes from './routes/users.js';
 import notificationRoutes from './routes/notifications.js';
 import departmentRoutes from './routes/departments.js';
+import agencyRoutes from './routes/agencies.js';
+import communicationRoutes from './routes/communications.js';
+import geographyRoutes from './routes/geography.js';
+import aiScreeningRoutes from './routes/aiScreening.js';
+import pipelineRoutes from './routes/pipeline.js';
+import casualWorkerRoutes from './routes/casualWorkers.js';
+import incomingMailRoutes from './routes/incomingMail.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,6 +50,13 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/agencies', agencyRoutes);
+app.use('/api/communications', communicationRoutes);
+app.use('/api/geography', geographyRoutes);
+app.use('/api/ai-screening', aiScreeningRoutes);
+app.use('/api/pipeline', pipelineRoutes);
+app.use('/api/casual-workers', casualWorkerRoutes);
+app.use('/api/incoming-mail', incomingMailRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 

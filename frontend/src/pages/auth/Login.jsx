@@ -14,6 +14,7 @@ const roleRedirects = {
   COUNTRY_MANAGER: '/management',
   MD: '/management',
   EMPLOYEE: '/employee',
+  AGENCY_PARTNER: '/agency',
 };
 
 const Login = () => {
@@ -106,6 +107,7 @@ const Login = () => {
                 { label: 'Management', email: 'manager@recruitment.com' },
                 { label: 'MD', email: 'md@recruitment.com' },
                 { label: 'Employee', email: 'employee@recruitment.com' },
+                { label: 'Agency Partner', email: 'agency@recruitment.com' },
               ].map(({ label, email }) => (
                 <button
                   key={email}

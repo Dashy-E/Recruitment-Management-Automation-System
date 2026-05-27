@@ -3,7 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, FileText, Users, Calendar, GraduationCap, ClipboardList,
   Mail, BarChart3, Settings, LogOut, Building2, UserCheck, BookOpen, Award,
-  ShieldCheck, Database, Bell, ChevronRight
+  ShieldCheck, Database, Bell, ChevronRight, Brain, Layers, MapPin, HardHat,
+  Inbox, Send
 } from 'lucide-react';
 
 const portalConfig = {
@@ -31,6 +32,13 @@ const portalConfig = {
       { to: '/recruiter/training', label: 'Training', icon: GraduationCap },
       { to: '/recruiter/exams', label: 'Examinations', icon: ClipboardList },
       { to: '/recruiter/offers', label: 'Offer Letters', icon: Mail },
+      { to: '/recruiter/pipeline', label: 'Pipeline', icon: Layers },
+      { to: '/recruiter/ai-screening', label: 'AI Screening', icon: Brain },
+      { to: '/recruiter/agencies', label: 'Agencies', icon: Building2 },
+      { to: '/recruiter/email-center', label: 'Email Center', icon: Send },
+      { to: '/recruiter/incoming-mail', label: 'Incoming Mail', icon: Inbox },
+      { to: '/recruiter/casual-workers', label: 'Casual Workers', icon: HardHat },
+      { to: '/recruiter/geography', label: 'Geography', icon: MapPin },
       { to: '/recruiter/reports', label: 'Reports', icon: BarChart3 },
     ],
   },
@@ -46,6 +54,13 @@ const portalConfig = {
       { to: '/recruiter/training', label: 'Training', icon: GraduationCap },
       { to: '/recruiter/exams', label: 'Examinations', icon: ClipboardList },
       { to: '/recruiter/offers', label: 'Offer Letters', icon: Mail },
+      { to: '/recruiter/pipeline', label: 'Pipeline', icon: Layers },
+      { to: '/recruiter/ai-screening', label: 'AI Screening', icon: Brain },
+      { to: '/recruiter/agencies', label: 'Agencies', icon: Building2 },
+      { to: '/recruiter/email-center', label: 'Email Center', icon: Send },
+      { to: '/recruiter/incoming-mail', label: 'Incoming Mail', icon: Inbox },
+      { to: '/recruiter/casual-workers', label: 'Casual Workers', icon: HardHat },
+      { to: '/recruiter/geography', label: 'Geography', icon: MapPin },
       { to: '/recruiter/reports', label: 'Reports', icon: BarChart3 },
     ],
   },
@@ -57,6 +72,14 @@ const portalConfig = {
       { to: '/recruiter', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/recruiter/interviews', label: 'My Interviews', icon: Calendar },
       { to: '/recruiter/candidates', label: 'Candidates', icon: Users },
+    ],
+  },
+  AGENCY_PARTNER: {
+    label: 'Agency Portal',
+    color: 'from-cyan-800 to-cyan-900',
+    accent: 'bg-cyan-700',
+    nav: [
+      { to: '/agency', label: 'Dashboard', icon: LayoutDashboard },
     ],
   },
   TRAINING: {
@@ -127,7 +150,7 @@ const Sidebar = () => {
   };
 
   return (
-    <div className={`w-64 min-h-screen bg-gradient-to-b ${config.color} text-white flex flex-col`}>
+    <div className={`w-64 h-screen sticky top-0 bg-gradient-to-b ${config.color} text-white flex flex-col`}>
       {/* Logo */}
       <div className="px-6 py-5 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -142,12 +165,12 @@ const Sidebar = () => {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
         {config.nav.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
-            end={to === '/recruiter' || to === '/training' || to === '/management' || to === '/admin' || to === '/employee'}
+            end={['/recruiter', '/training', '/management', '/admin', '/employee', '/agency'].includes(to)}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 isActive ? `${config.accent} text-white shadow-lg` : 'text-white/70 hover:text-white hover:bg-white/10'

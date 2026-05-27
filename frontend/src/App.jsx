@@ -17,6 +17,17 @@ import TrainingCoordination from './pages/recruiter/Training/TrainingCoordinatio
 import ExamManagement from './pages/recruiter/Exams/ExamManagement';
 import OfferManagement from './pages/recruiter/Offers/OfferManagement';
 import Reports from './pages/recruiter/Reports/Reports';
+import AgencyList from './pages/recruiter/Agencies/AgencyList';
+import AgencyDetail from './pages/recruiter/Agencies/AgencyDetail';
+import EmailCenter from './pages/recruiter/EmailCenter/EmailCenter';
+import PipelineKanban from './pages/recruiter/Pipeline/PipelineKanban';
+import AIScreening from './pages/recruiter/AIScreening/AIScreening';
+import CasualWorkers from './pages/recruiter/CasualWorkers/CasualWorkers';
+import GeographyIntelligence from './pages/recruiter/Geography/GeographyIntelligence';
+import IncomingMail from './pages/recruiter/IncomingMail/IncomingMail';
+
+// Agency Partner
+import AgencyDashboard from './pages/agency/AgencyDashboard';
 
 // Employee
 import EmployeeDashboard from './pages/employee/Dashboard';
@@ -48,6 +59,7 @@ const roleRedirects = {
   COUNTRY_MANAGER: '/management',
   MD: '/management',
   EMPLOYEE: '/employee',
+  AGENCY_PARTNER: '/agency',
 };
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -63,6 +75,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 const RECRUITER_ROLES = ['HR', 'RECRUITER', 'INTERVIEWER', 'ADMIN'];
+const AGENCY_ROLES = ['AGENCY_PARTNER', 'ADMIN'];
 const TRAINING_ROLES = ['TRAINING', 'ADMIN'];
 const MANAGEMENT_ROLES = ['BRANCH_MANAGER', 'COUNTRY_MANAGER', 'MD', 'ADMIN'];
 const ADMIN_ROLES = ['ADMIN'];
@@ -87,6 +100,19 @@ const AppRoutes = () => {
         <Route path="exams" element={<ExamManagement />} />
         <Route path="offers" element={<OfferManagement />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="agencies" element={<AgencyList />} />
+        <Route path="agencies/:id" element={<AgencyDetail />} />
+        <Route path="email-center" element={<EmailCenter />} />
+        <Route path="pipeline" element={<PipelineKanban />} />
+        <Route path="ai-screening" element={<AIScreening />} />
+        <Route path="casual-workers" element={<CasualWorkers />} />
+        <Route path="geography" element={<GeographyIntelligence />} />
+        <Route path="incoming-mail" element={<IncomingMail />} />
+      </Route>
+
+      {/* Agency Partner Portal */}
+      <Route path="/agency" element={<ProtectedRoute allowedRoles={AGENCY_ROLES}><Layout /></ProtectedRoute>}>
+        <Route index element={<AgencyDashboard />} />
       </Route>
 
       {/* Employee Portal */}

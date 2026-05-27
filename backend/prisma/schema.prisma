@@ -21,16 +21,20 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  department            Department?           @relation(fields: [departmentId], references: [id])
-  mrfCreated            MRF[]                 @relation("MRFCreator")
-  mrfApproved           MRF[]                 @relation("MRFApprover")
-  candidatesAdded       Candidate[]           @relation("CandidateAdder")
-  interviewsScheduled   Interview[]           @relation("InterviewScheduler")
-  interviewFeedback     InterviewFeedback[]
-  trainingBatchesManaged TrainingBatch[]      @relation("BatchManager")
-  notifications         Notification[]
-  auditLogs             AuditLog[]
-  candidateComments     CandidateComment[]
+  department              Department?           @relation(fields: [departmentId], references: [id])
+  mrfCreated              MRF[]                 @relation("MRFCreator")
+  mrfApproved             MRF[]                 @relation("MRFApprover")
+  candidatesAdded         Candidate[]           @relation("CandidateAdder")
+  interviewsScheduled     Interview[]           @relation("InterviewScheduler")
+  interviewFeedback       InterviewFeedback[]
+  trainingBatchesManaged  TrainingBatch[]       @relation("BatchManager")
+  notifications           Notification[]
+  auditLogs               AuditLog[]
+  candidateComments       CandidateComment[]
+  agencyPartner           AgencyPartner?
+  communicationsSent      Communication[]       @relation("CommSender")
+  casualWorkersAdded      CasualWorker[]        @relation("CasualWorkerAdder")
+  incomingMailsProcessed  IncomingMail[]        @relation("MailProcessor")
 }
 
 model Department {
@@ -71,10 +75,13 @@ model MRF {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
-  department Department  @relation(fields: [departmentId], references: [id])
-  createdBy  User        @relation("MRFCreator", fields: [createdById], references: [id])
-  approvedBy User?       @relation("MRFApprover", fields: [approvedById], references: [id])
-  candidates Candidate[]
+  department      Department       @relation(fields: [departmentId], references: [id])
+  createdBy       User             @relation("MRFCreator", fields: [createdById], references: [id])
+  approvedBy      User?            @relation("MRFApprover", fields: [approvedById], references: [id])
+  candidates      Candidate[]
+  jobDescription  JobDescription?
+  pipelineStages  PipelineStage[]
+  agencySubmissions AgencySubmission[]
 }
 
 model Candidate {
@@ -89,7 +96,9 @@ model Candidate {
   gender          String?
   address         String?
   city            String?
+  state           String?
   country         String?
+  pincode         String?
   designation     String
   experience      Int       @default(0)
   currentSalary   Float?
@@ -102,14 +111,20 @@ model Candidate {
   resumePath      String?
   status          String    @default("APPLIED")
   source          String?
+  sourceDetail    String?
   mrfId           String?
+  locationId      String?
   addedById       String
+  aadhaarNumber   String?
+  panNumber       String?
+  isContractual   Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
 
   mrf                MRF?                @relation(fields: [mrfId], references: [id])
   addedBy            User                @relation("CandidateAdder", fields: [addedById], references: [id])
+  location           Location?           @relation(fields: [locationId], references: [id])
   documents          CandidateDocument[]
   comments           CandidateComment[]
   interviews         Interview[]
@@ -119,6 +134,12 @@ model Candidate {
   offerLetter        OfferLetter?
   appointmentLetter  AppointmentLetter?
   probation          Probation?
+  aiScreeningResult  AIScreeningResult?
+  agencySubmissions  AgencySubmission[]
+  communications     Communication[]
+  pipelineEntries    PipelineEntry[]
+  casualWorker       CasualWorker?
+  candidateSources   CandidateSource[]
 }
 
 model CandidateDocument {
@@ -369,4 +390,268 @@ model AuditLog {
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id])
+}
+
+// ─── Agency Management ────────────────────────────────────────────────────────
+
+model Agency {
+  id              String    @id @default(cuid())
+  agencyCode      String    @unique
+  name            String
+  contactPerson   String
+  email           String
+  phone           String
+  address         String?
+  city            String?
+  state           String?
+  country         String    @default("India")
+  specializations String    @default("[]")
+  tier            String    @default("STANDARD")
+  status          String    @default("ACTIVE")
+  rating          Float?
+  totalSubmissions Int      @default(0)
+  successfulHires  Int      @default(0)
+  contractStart   DateTime?
+  contractEnd     DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  contacts    AgencyContact[]
+  submissions AgencySubmission[]
+  partners    AgencyPartner[]
+  locations   AgencyLocation[]
+}
+
+model AgencyContact {
+  id          String   @id @default(cuid())
+  agencyId    String
+  name        String
+  designation String?
+  email       String?
+  phone       String?
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model AgencySubmission {
+  id          String    @id @default(cuid())
+  agencyId    String
+  mrfId       String
+  candidateId String
+  submittedAt DateTime  @default(now())
+  status      String    @default("SUBMITTED")
+  fee         Float?
+  notes       String?
+  updatedAt   DateTime  @updatedAt
+
+  agency    Agency    @relation(fields: [agencyId], references: [id])
+  mrf       MRF       @relation(fields: [mrfId], references: [id])
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model AgencyPartner {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  agencyId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+// ─── Geographic Intelligence ──────────────────────────────────────────────────
+
+model Location {
+  id        String   @id @default(cuid())
+  city      String
+  state     String
+  country   String   @default("India")
+  region    String?
+  zone      String?
+  pincode   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  candidates Candidate[]
+  agencies   AgencyLocation[]
+
+  @@unique([city, state, country])
+}
+
+model AgencyLocation {
+  id         String   @id @default(cuid())
+  agencyId   String
+  locationId String
+  isPrimary  Boolean  @default(false)
+
+  agency   Agency   @relation(fields: [agencyId], references: [id])
+  location Location @relation(fields: [locationId], references: [id])
+
+  @@unique([agencyId, locationId])
+}
+
+// ─── Candidate Sourcing ───────────────────────────────────────────────────────
+
+model CandidateSource {
+  id          String    @id @default(cuid())
+  candidateId String
+  source      String
+  platform    String?
+  url         String?
+  postedAt    DateTime?
+  importedAt  DateTime  @default(now())
+  rawData     String?
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+}
+
+// ─── AI Screening ─────────────────────────────────────────────────────────────
+
+model JobDescription {
+  id           String   @id @default(cuid())
+  mrfId        String   @unique
+  title        String
+  description  String
+  requirements String
+  skills       String   @default("[]")
+  experience   String?
+  processedAt  DateTime?
+  vectorData   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  mrf              MRF                @relation(fields: [mrfId], references: [id])
+  screeningResults AIScreeningResult[]
+}
+
+model AIScreeningResult {
+  id             String    @id @default(cuid())
+  candidateId    String    @unique
+  jdId           String
+  matchScore     Float
+  skillsMatched  String    @default("[]")
+  skillsMissing  String    @default("[]")
+  experienceGap  Int?
+  recommendation String?
+  summary        String?
+  processedAt    DateTime  @default(now())
+  modelVersion   String?
+
+  candidate      Candidate      @relation(fields: [candidateId], references: [id])
+  jobDescription JobDescription @relation(fields: [jdId], references: [id])
+}
+
+// ─── Email & Communication Engine ────────────────────────────────────────────
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  subject     String
+  body        String
+  category    String
+  variables   String   @default("[]")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  communications Communication[]
+}
+
+model Communication {
+  id           String    @id @default(cuid())
+  candidateId  String?
+  templateId   String?
+  sentById     String
+  subject      String
+  body         String
+  channel      String    @default("EMAIL")
+  status       String    @default("SENT")
+  recipientEmail String?
+  recipientPhone String?
+  sentAt       DateTime  @default(now())
+  failureReason String?
+  metadata     String?
+
+  candidate Candidate?     @relation(fields: [candidateId], references: [id])
+  template  EmailTemplate? @relation(fields: [templateId], references: [id])
+  sentBy    User           @relation("CommSender", fields: [sentById], references: [id])
+}
+
+// ─── Recruitment Pipeline ─────────────────────────────────────────────────────
+
+model PipelineStage {
+  id          String   @id @default(cuid())
+  mrfId       String
+  name        String
+  order       Int
+  color       String   @default("#6366f1")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  mrf     MRF             @relation(fields: [mrfId], references: [id])
+  entries PipelineEntry[]
+
+  @@unique([mrfId, order])
+}
+
+model PipelineEntry {
+  id          String   @id @default(cuid())
+  candidateId String
+  stageId     String
+  enteredAt   DateTime @default(now())
+  notes       String?
+
+  candidate Candidate     @relation(fields: [candidateId], references: [id])
+  stage     PipelineStage @relation(fields: [stageId], references: [id])
+}
+
+// ─── Incoming Mail ────────────────────────────────────────────────────────────
+
+model IncomingMail {
+  id            String    @id @default(cuid())
+  messageId     String?   @unique
+  fromEmail     String
+  fromName      String?
+  subject       String
+  body          String?
+  receivedAt    DateTime  @default(now())
+  status        String    @default("UNPROCESSED")
+  hasAttachment Boolean   @default(false)
+  attachments   String    @default("[]")
+  candidateId   String?
+  processedById String?
+  processedAt   DateTime?
+  notes         String?
+
+  processedBy User? @relation("MailProcessor", fields: [processedById], references: [id])
+}
+
+// ─── Casual / Contractual Workers ────────────────────────────────────────────
+
+model CasualWorker {
+  id              String    @id @default(cuid())
+  candidateId     String    @unique
+  workerType      String    @default("CASUAL")
+  contractStart   DateTime
+  contractEnd     DateTime?
+  dailyRate       Float?
+  monthlyRate     Float?
+  aadhaarVerified Boolean   @default(false)
+  panVerified     Boolean   @default(false)
+  bankAccount     String?
+  ifscCode        String?
+  department      String?
+  reportingTo     String?
+  siteLocation    String?
+  status          String    @default("ACTIVE")
+  addedById       String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  candidate Candidate @relation(fields: [candidateId], references: [id])
+  addedBy   User      @relation("CasualWorkerAdder", fields: [addedById], references: [id])
 }
