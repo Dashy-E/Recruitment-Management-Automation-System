@@ -63,6 +63,38 @@ router.post('/', authenticate, authorize(...HR_ROLES), async (req, res) => {
   }
 });
 
+// Get own agency (for AGENCY_PARTNER role)
+router.get('/my', authenticate, authorize('AGENCY_PARTNER', 'ADMIN'), async (req, res) => {
+  try {
+    const partner = await prisma.agencyPartner.findUnique({
+      where: { userId: req.user.id },
+      include: {
+        agency: {
+          include: {
+            contacts: true,
+            locations: { include: { location: true } },
+            submissions: {
+              include: { candidate: true, mrf: true },
+              orderBy: { submittedAt: 'desc' },
+              take: 20,
+            },
+          },
+        },
+      },
+    });
+    if (!partner) return res.status(404).json({ error: 'No agency linked to your account' });
+    const submissions = partner.agency.submissions;
+    const placed = submissions.filter(s => ['OFFER_ACCEPTED', 'ONBOARDED', 'CONFIRMED'].includes(s.candidate?.status)).length;
+    const successRate = submissions.length ? Math.round((placed / submissions.length) * 100) : 0;
+    res.json({
+      agency: partner.agency,
+      performance: { totalSubmissions: submissions.length, placed, successRate },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get agency detail
 router.get('/:id', authenticate, authorize(...HR_ROLES, 'AGENCY_PARTNER'), async (req, res) => {
   try {

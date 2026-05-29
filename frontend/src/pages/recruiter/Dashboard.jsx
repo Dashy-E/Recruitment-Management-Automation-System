@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, FileText, Calendar, GraduationCap, ClipboardList, Mail, TrendingUp, Clock } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { reportAPI } from '../../services/api';
 import KPICard from '../../components/common/KPICard';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -73,15 +73,24 @@ const RecruiterDashboard = () => {
             <h3 className="font-semibold text-gray-800">Candidate Status Breakdown</h3>
           </div>
           {pieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" label={false}>
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-                <Legend iconType="circle" iconSize={10} />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="99%" height={200}>
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={85} dataKey="value" label={false}>
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(value, name) => [value, name]} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-2">
+                {pieData.map((entry, i) => (
+                  <div key={entry.name} className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-xs text-gray-600 truncate">{entry.name} <span className="text-gray-400">({entry.value})</span></span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="h-56 flex items-center justify-center text-gray-400 text-sm">No data available</div>
           )}

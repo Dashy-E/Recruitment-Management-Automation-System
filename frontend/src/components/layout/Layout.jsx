@@ -28,8 +28,17 @@ const pageTitles = {
   '/admin': 'Admin Dashboard',
   '/admin/users': 'User Management',
   '/admin/departments': 'Departments',
+  '/admin/departments': 'Departments',
   '/admin/audit-logs': 'Audit Logs',
   '/admin/settings': 'System Settings',
+  '/recruiter/pipeline': 'Recruitment Pipeline',
+  '/recruiter/ai-screening': 'AI Screening',
+  '/recruiter/agencies': 'Agency Management',
+  '/recruiter/email-center': 'Email Center',
+  '/recruiter/casual-workers': 'Casual Workers',
+  '/recruiter/geography': 'Geographic Intelligence',
+  '/recruiter/incoming-mail': 'Incoming Mail',
+  '/agency': 'Agency Partner Portal',
 };
 
 const Layout = () => {

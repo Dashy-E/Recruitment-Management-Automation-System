@@ -20,6 +20,7 @@ const CandidateList = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [importing, setImporting] = useState(false);
   const mrfId = searchParams.get('mrfId');
 
   const fetchCandidates = async () => {
@@ -46,6 +47,24 @@ const CandidateList = () => {
     catch { toast.error('Failed to update status'); }
   };
 
+  const handleCSVImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await candidateAPI.importCSV(form);
+      const { created, skipped, errors } = res.data;
+      toast.success(`Imported ${created} candidate${created !== 1 ? 's' : ''}${skipped ? `, skipped ${skipped} duplicates` : ''}`);
+      if (errors?.length) console.warn('Import errors:', errors);
+      fetchCandidates();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Import failed');
+    } finally { setImporting(false); }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -53,10 +72,16 @@ const CandidateList = () => {
           <h2 className="text-lg font-semibold text-gray-800">Candidates</h2>
           <p className="text-sm text-gray-500">{total} total candidates</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-          <Plus size={16} />
-          Add Candidate
-        </button>
+        <div className="flex items-center gap-2">
+          <label className={`flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+            <Upload size={15} />
+            {importing ? 'Importing…' : 'Import CSV'}
+            <input type="file" accept=".csv" className="hidden" onChange={handleCSVImport} disabled={importing} />
+          </label>
+          <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+            <Plus size={16} /> Add Candidate
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-3 flex-wrap">

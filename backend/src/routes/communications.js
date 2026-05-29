@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, authorize } from '../middleware/auth.js';
+import { sendEmail } from '../utils/mailer.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -99,8 +100,24 @@ router.post('/send', authenticate, authorize(...HR_ROLES), async (req, res) => {
     const records = await Promise.all(ids.map(async (candidateId) => {
       const candidate = await prisma.candidate.findUnique({
         where: { id: candidateId },
-        select: { email: true, phone: true },
+        select: { email: true, phone: true, firstName: true, lastName: true },
       });
+
+      let emailStatus = 'SENT';
+      let failureReason = null;
+
+      if (channel === 'EMAIL' && candidate?.email) {
+        const result = await sendEmail({
+          to: candidate.email,
+          subject: resolvedSubject,
+          html: resolvedBody,
+        });
+        if (!result.success) {
+          emailStatus = 'FAILED';
+          failureReason = result.error;
+        }
+      }
+
       return prisma.communication.create({
         data: {
           candidateId,
@@ -112,7 +129,8 @@ router.post('/send', authenticate, authorize(...HR_ROLES), async (req, res) => {
           recipientEmail: candidate?.email,
           recipientPhone: candidate?.phone,
           metadata: metadata ? JSON.stringify(metadata) : null,
-          status: 'SENT',
+          status: emailStatus,
+          failureReason,
         },
       });
     }));

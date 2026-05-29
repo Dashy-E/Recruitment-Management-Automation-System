@@ -35,19 +35,26 @@ import EmployeeProfile from './pages/employee/Profile';
 import EmployeeDocuments from './pages/employee/Documents';
 import EmployeeTraining from './pages/employee/Training';
 import EmployeeExams from './pages/employee/Exams';
+import EmployeeOffers from './pages/employee/Offers';
 
 // Training
 import TrainingDashboard from './pages/training/Dashboard';
 import TrainingBatches from './pages/training/Batches';
 import TrainingAttendance from './pages/training/Attendance';
+import TrainingReports from './pages/training/Reports';
 
 // Management
 import ManagementDashboard from './pages/management/Dashboard';
 import ManagementReports from './pages/management/Reports';
+import ManagementApprovals from './pages/management/Approvals';
+import ManagementProbation from './pages/management/Probation';
 
 // Admin
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
+import AdminDepartments from './pages/admin/Departments';
+import AuditLogs from './pages/admin/AuditLogs';
+import SystemSettings from './pages/admin/SystemSettings';
 
 const roleRedirects = {
   ADMIN: '/admin',
@@ -122,7 +129,7 @@ const AppRoutes = () => {
         <Route path="documents" element={<EmployeeDocuments />} />
         <Route path="training" element={<EmployeeTraining />} />
         <Route path="exams" element={<EmployeeExams />} />
-        <Route path="offers" element={<EmployeeDashboard />} />
+        <Route path="offers" element={<EmployeeOffers />} />
       </Route>
 
       {/* Training Portal */}
@@ -130,24 +137,24 @@ const AppRoutes = () => {
         <Route index element={<TrainingDashboard />} />
         <Route path="batches" element={<TrainingBatches />} />
         <Route path="attendance" element={<TrainingAttendance />} />
-        <Route path="reports" element={<TrainingBatches />} />
+        <Route path="reports" element={<TrainingReports />} />
       </Route>
 
       {/* Management Portal */}
       <Route path="/management" element={<ProtectedRoute allowedRoles={MANAGEMENT_ROLES}><Layout /></ProtectedRoute>}>
         <Route index element={<ManagementDashboard />} />
         <Route path="reports" element={<ManagementReports />} />
-        <Route path="probation" element={<ManagementDashboard />} />
-        <Route path="approvals" element={<ManagementDashboard />} />
+        <Route path="probation" element={<ManagementProbation />} />
+        <Route path="approvals" element={<ManagementApprovals />} />
       </Route>
 
       {/* Admin Portal */}
       <Route path="/admin" element={<ProtectedRoute allowedRoles={ADMIN_ROLES}><Layout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="users" element={<AdminUsers />} />
-        <Route path="departments" element={<AdminDashboard />} />
-        <Route path="audit-logs" element={<AdminDashboard />} />
-        <Route path="settings" element={<AdminDashboard />} />
+        <Route path="departments" element={<AdminDepartments />} />
+        <Route path="audit-logs" element={<AuditLogs />} />
+        <Route path="settings" element={<SystemSettings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

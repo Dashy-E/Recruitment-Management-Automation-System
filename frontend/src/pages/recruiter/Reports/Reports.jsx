@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { reportAPI } from '../../../services/api';
 import StatusBadge from '../../../components/common/StatusBadge';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { FileText, Download, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -72,14 +72,45 @@ const Reports = () => {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <input type="date" value={filters.from} onChange={e => setFilters(p => ({ ...p, from: e.target.value }))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="From" />
-        <input type="date" value={filters.to} onChange={e => setFilters(p => ({ ...p, to: e.target.value }))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="To" />
-        <button onClick={fetchReport} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
-          <Filter size={14} /> Apply
-        </button>
-      </div>
+      {/* Filters — date range and status only apply to candidates/interviews */}
+      {['candidates', 'interviews'].includes(activeReport) && (
+        <div className="flex flex-wrap gap-3 items-end">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">From</label>
+            <input type="date" value={filters.from} onChange={e => setFilters(p => ({ ...p, from: e.target.value }))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">To</label>
+            <input type="date" value={filters.to} onChange={e => setFilters(p => ({ ...p, to: e.target.value }))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          {activeReport === 'candidates' && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Status</label>
+              <select value={filters.status} onChange={e => setFilters(p => ({ ...p, status: e.target.value }))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Statuses</option>
+                {['APPLIED','SCREENING','INTERVIEW','SELECTED','TRAINING','EXAM_PENDING','OFFER','ONBOARDED','CONFIRMED','REJECTED'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          {activeReport === 'interviews' && (
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Status</label>
+              <select value={filters.status} onChange={e => setFilters(p => ({ ...p, status: e.target.value }))} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">All Statuses</option>
+                {['SCHEDULED','COMPLETED','CANCELLED','NO_SHOW'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button onClick={fetchReport} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
+              <Filter size={14} /> Apply
+            </button>
+            <button onClick={() => { setFilters({ from: '', to: '', status: '' }); setTimeout(fetchReport, 0); }} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50">
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Report Content */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

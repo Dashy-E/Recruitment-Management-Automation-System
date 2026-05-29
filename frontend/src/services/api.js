@@ -52,6 +52,7 @@ export const candidateAPI = {
   addComment: (id, comment) => api.post(`/candidates/${id}/comments`, { comment }),
   editComment: (id, commentId, comment) => api.put(`/candidates/${id}/comments/${commentId}`, { comment }),
   delete: (id) => api.delete(`/candidates/${id}`),
+  importCSV: (formData) => api.post('/candidates/import/csv', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 // Interviews
@@ -88,6 +89,7 @@ export const examAPI = {
 // Offers
 export const offerAPI = {
   getAll: (params) => api.get('/offers', { params }),
+  getMine: () => api.get('/offers/mine'),
   getById: (id) => api.get(`/offers/${id}`),
   create: (data) => api.post('/offers', data),
   update: (id, data) => api.put(`/offers/${id}`, data),
@@ -137,6 +139,7 @@ export const departmentAPI = {
 // Agencies
 export const agencyAPI = {
   getAll: (params) => api.get('/agencies', { params }),
+  getMy: () => api.get('/agencies/my'),
   getById: (id) => api.get(`/agencies/${id}`),
   create: (data) => api.post('/agencies', data),
   update: (id, data) => api.put(`/agencies/${id}`, data),
@@ -203,6 +206,23 @@ export const incomingMailAPI = {
   process: (id, data) => api.patch(`/incoming-mail/${id}/process`, data),
   createCandidate: (id) => api.post(`/incoming-mail/${id}/create-candidate`),
   discard: (id) => api.patch(`/incoming-mail/${id}/discard`),
+};
+
+// Probation
+export const probationAPI = {
+  getAll: (params) => api.get('/probation', { params }),
+  getById: (id) => api.get(`/probation/${id}`),
+  create: (data) => api.post('/probation', data),
+  update: (id, data) => api.put(`/probation/${id}`, data),
+  approve: (id) => api.post(`/probation/${id}/approve`),
+  extend: (id, data) => api.post(`/probation/${id}/extend`, data),
+  fail: (id, data) => api.post(`/probation/${id}/fail`, data),
+};
+
+// Audit Logs
+export const auditLogAPI = {
+  getAll: (params) => api.get('/audit-logs', { params }),
+  getEntities: () => api.get('/audit-logs/entities'),
 };
 
 export default api;

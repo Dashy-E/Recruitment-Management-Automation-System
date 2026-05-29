@@ -187,4 +187,67 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Bulk CSV import
+const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+router.post('/import/csv', csvUpload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const text = req.file.buffer.toString('utf-8');
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return res.status(400).json({ message: 'CSV must have a header row and at least one data row' });
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+
+    const required = ['firstname', 'lastname', 'email', 'phone', 'designation'];
+    const missing = required.filter(r => !headers.includes(r));
+    if (missing.length) return res.status(400).json({ message: `Missing required columns: ${missing.join(', ')}` });
+
+    const results = { created: 0, skipped: 0, errors: [] };
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+
+      if (!row.email || !row.phone || !row.firstname || !row.designation) {
+        results.errors.push({ row: i + 1, reason: 'Missing required field' });
+        continue;
+      }
+
+      try {
+        const existing = await prisma.candidate.findFirst({
+          where: { OR: [{ email: row.email }, { phone: row.phone }], deletedAt: null },
+        });
+        if (existing) { results.skipped++; continue; }
+
+        const candidateId = await generateCandidateId(prisma);
+        await prisma.candidate.create({
+          data: {
+            candidateId,
+            firstName: row.firstname,
+            lastName: row.lastname,
+            email: row.email.toLowerCase(),
+            phone: row.phone,
+            designation: row.designation,
+            experience: parseInt(row.experience) || 0,
+            currentCompany: row.currentcompany || null,
+            city: row.city || null,
+            source: (row.source || 'DIRECT').toUpperCase(),
+            addedById: req.user.id,
+          },
+        });
+        results.created++;
+      } catch {
+        results.errors.push({ row: i + 1, reason: 'Database error (possible duplicate)' });
+      }
+    }
+
+    res.json(results);
+  } catch (e) {
+    res.status(500).json({ message: 'Failed to import CSV' });
+  }
+});
+
 export default router;

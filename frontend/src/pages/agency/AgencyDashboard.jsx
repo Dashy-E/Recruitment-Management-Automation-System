@@ -19,20 +19,14 @@ export default function AgencyDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Find agency tied to this partner user
-        const agencyRes = await agencyAPI.getAll({ limit: 1 });
-        // In production, user.agencyId would be on the token; here we look up the first agency the partner belongs to
-        const firstAgency = agencyRes.data.agencies?.[0];
-        if (firstAgency) {
-          const [detail, perfData] = await Promise.all([
-            agencyAPI.getById(firstAgency.id),
-            agencyAPI.getPerformance(firstAgency.id),
-          ]);
-          setAgency(detail.data);
-          setPerf(perfData.data);
-          setSubmissions(detail.data.submissions || []);
-        }
-        mrfAPI.getAll({ status: 'APPROVED', limit: 20 }).then(r => setMrfs(r.data.mrfs || []));
+        const [myRes, mrfRes] = await Promise.all([
+          agencyAPI.getMy(),
+          mrfAPI.getAll({ status: 'APPROVED', limit: 20 }),
+        ]);
+        setAgency(myRes.data.agency);
+        setPerf(myRes.data.performance);
+        setSubmissions(myRes.data.agency?.submissions || []);
+        setMrfs(mrfRes.data.mrfs || []);
       } catch { toast.error('Failed to load data'); } finally { setLoading(false); }
     };
     fetchData();

@@ -23,6 +23,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/mine', async (req, res) => {
+  try {
+    const candidate = await prisma.candidate.findFirst({
+      where: { email: req.user.email, deletedAt: null },
+    });
+    if (!candidate) return res.json(null);
+    const offer = await prisma.offerLetter.findUnique({
+      where: { candidateId: candidate.id },
+      include: { candidate: true },
+    });
+    res.json(offer || null);
+  } catch (e) {
+    res.status(500).json({ message: 'Failed to fetch offer' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const offer = await prisma.offerLetter.findUnique({

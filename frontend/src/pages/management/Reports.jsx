@@ -14,7 +14,27 @@ const ManagementReports = () => {
   }, []);
 
   const handleExport = () => {
-    toast.success('Report exported successfully');
+    if (!candidates.length) return toast.error('No data to export');
+    const headers = ['ID', 'First Name', 'Last Name', 'Designation', 'Status', 'Source', 'CTC', 'Date Added'];
+    const rows = candidates.map(c => [
+      c.candidateId,
+      c.firstName,
+      c.lastName,
+      c.designation,
+      c.status,
+      c.source || '',
+      c.offerLetter?.ctc ?? '',
+      format(new Date(c.createdAt), 'dd MMM yyyy'),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `recruitment-report-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Report exported');
   };
 
   return (

@@ -10,12 +10,24 @@ router.use(authenticate);
 
 router.get('/', async (req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      where: { deletedAt: null },
-      select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, lastLogin: true, createdAt: true, department: true },
-      include: { department: { select: { name: true } } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { page = 1, limit = 50, search, role } = req.query;
+    const where = { deletedAt: null };
+    if (role) where.role = role;
+    if (search) where.OR = [
+      { firstName: { contains: search } },
+      { lastName: { contains: search } },
+      { email: { contains: search } },
+    ];
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: { id: true, email: true, firstName: true, lastName: true, role: true, departmentId: true, isActive: true, lastLogin: true, createdAt: true, department: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip: (parseInt(page) - 1) * parseInt(limit),
+        take: parseInt(limit),
+      }),
+      prisma.user.count({ where }),
+    ]);
     res.json(users);
   } catch (e) {
     res.status(500).json({ message: 'Failed to fetch users' });

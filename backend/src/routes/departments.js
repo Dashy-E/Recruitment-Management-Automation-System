@@ -9,7 +9,9 @@ router.use(authenticate);
 
 router.get('/', async (req, res) => {
   try {
-    const departments = await prisma.department.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } });
+    const { includeInactive } = req.query;
+    const where = includeInactive === 'true' ? {} : { isActive: true };
+    const departments = await prisma.department.findMany({ where, orderBy: { name: 'asc' } });
     res.json(departments);
   } catch (e) {
     res.status(500).json({ message: 'Failed to fetch departments' });
