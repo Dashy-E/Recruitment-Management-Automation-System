@@ -150,9 +150,10 @@ cd frontend && npm run dev
 - Batch screening per MRF
 
 ### Agency Management
-- Agency directory with tier (STANDARD · PREFERRED · PREMIUM) and status (ACTIVE · BLACKLISTED)
+- Agency directory with type (HIRING for permanent/office staff · MANPOWER for contractual/casual workers), tier (STANDARD · PREFERRED · PREMIUM), and status (ACTIVE · BLACKLISTED)
 - Contacts, submissions linked to MRF + Candidate, performance metrics (success rate, placements)
 - Agency Partner self-service: own agency resolved via `AgencyPartner.userId` — no HR access required
+- Filter by `agencyType` to see only HIRING or MANPOWER agencies
 
 ### Communications
 - Email templates with `{{variable}}` substitution and preview
@@ -170,9 +171,25 @@ cd frontend && npm run dev
 - Aadhaar/PAN verification flags
 
 ### Incoming Mail
-- Ingest raw emails; auto-parse body to extract candidate fields and create a Candidate record
-- Status: UNPROCESSED → PROCESSED / LINKED / DISCARDED
-- Deduplicates on `messageId`
+- Ingest raw emails; auto-detects linked agency from sender email domain (no manual selection needed)
+- Auto-parse body to extract candidate fields and create a Candidate record
+- **Express-track**: mail from a MANPOWER agency auto-creates candidate at SHORTLISTED, `isExpressTrack=true`, `isContractual=true`, and a CasualWorker stub — no screening or interview rounds required
+- Standard agency mail creates candidate at APPLIED status entering the normal pipeline
+- Status: UNPROCESSED → PROCESSED / LINKED / DISCARDED — deduplicates on `messageId`
+- Supports `?agencyId=` and `?mrfId=` filters; shows agency type badge, MRF link, and outreach reply context in UI
+
+### Agency Outreach (via MRF Detail)
+- Each MRF surfaces geo-scored agency suggestions filtered by `workerType` (PERMANENT → HIRING agencies, CONTRACTUAL/CASUAL → MANPOWER agencies)
+- Scoring: city name match in `location+branch` string = 2 pts, state match = 1 pt; sorted by score → tier → success rate
+- Send bulk templated outreach emails to selected agencies; `{{variable}}` substitution for agencyName, designation, vacancies, location, mrfNumber, experience
+- Outreach history with response count and expandable reply thread (linked IncomingMail records)
+
+### Platform Sourcing
+- Track where each MRF has been posted: LinkedIn, Naukri, Indeed, Internshala, Monster India, Shine, or Other
+- Auto-generate platform-formatted job description text (LinkedIn gets hashtags, etc.)
+- Copy-to-clipboard description; record the posting URL after publishing externally
+- Manually update application count; toggle status ACTIVE / PAUSED / CLOSED
+- Platform pill filters and per-MRF posting history
 
 ### Reports
 - Five report types: Candidate, Interview, Training, Exam, MRF
@@ -230,7 +247,8 @@ For the full contract (query params, request bodies, response shapes) see [conte
 | AI Screening | `/ai-screening` | JD upsert, score, batch |
 | Pipeline | `/pipeline` | Kanban per MRF |
 | Casual Workers | `/casual-workers` | |
-| Incoming Mail | `/incoming-mail` | |
+| Incoming Mail | `/incoming-mail` | Auto-agency detection, express-track |
+| Sourcing | `/sourcing` | Platform job posting tracker |
 
 ---
 
@@ -316,7 +334,11 @@ APPLIED
 - **Audit logging** — CREATE, STATUS_CHANGE, and other mutations write to `AuditLog`
 - **Employee↔Candidate link** — resolved by matching `user.email` to `candidate.email` (no direct FK)
 - **Agency partner scoping** — AGENCY_PARTNER role is blocked from `GET /agencies`; must use `GET /agencies/my`
-- **Route ordering** — named paths (`/mine`, `/my`, `/today`, `/interviewers`) are always registered before `/:id`
+- **Route ordering** — named paths (`/mine`, `/my`, `/today`, `/interviewers`, `/generate-description`) are always registered before `/:id`
+- **Agency type routing** — Agency.agencyType (HIRING | MANPOWER) paired with MRF.workerType (PERMANENT | CONTRACTUAL | CASUAL) determines which agencies appear in geo-scored outreach suggestions
+- **Express-track pipeline** — Incoming mail from a MANPOWER agency skips full screening: candidate created at SHORTLISTED with `isExpressTrack=true`, `isContractual=true`, and a CasualWorker stub auto-created
+- **Auto-agency detection** — `POST /incoming-mail` matches sender email domain against `Agency.email` to auto-link without manual selection
+- **Geographic outreach scoring** — city match = 2 pts, state match = 1 pt against MRF location+branch string; sorted by score → tier → success rate
 
 ---
 
@@ -337,7 +359,7 @@ recruitment app/
 │   │   ├── utils/
 │   │   │   ├── helpers.js       # generateCandidateId, createAuditLog, paginate
 │   │   │   └── mailer.js        # sendEmail with lazy nodemailer init
-│   │   └── routes/              # 20 route files, one per domain
+│   │   └── routes/              # 21 route files, one per domain
 │   ├── uploads/                 # Multer disk storage (resumes, documents)
 │   └── .env
 ├── frontend/
@@ -350,13 +372,13 @@ recruitment app/
 │       │   └── common/          # StatusBadge, Modal, KPICard
 │       ├── pages/               # Organised by portal
 │       │   ├── admin/           # Users, Departments, AuditLogs, Settings
-│       │   ├── recruiter/       # MRF, Candidates, Interviews, Pipeline, AI, Reports…
+│       │   ├── recruiter/       # MRF (4-tab detail), Candidates, Interviews, Pipeline, AI, Reports, Sourcing, IncomingMail…
 │       │   ├── training/        # Batches, Attendance, Reports, Dashboard
 │       │   ├── management/      # Dashboard, Approvals, Probation, Reports
 │       │   ├── employee/        # Dashboard, Offers
 │       │   └── agency/          # AgencyDashboard
 │       └── services/
-│           └── api.js           # Axios instance + 20 typed API objects
+│           └── api.js           # Axios instance + 21 typed API objects
 └── context/                     # Documentation
     ├── ARCHITECTURE.md
     ├── API_CONTRACTS.md

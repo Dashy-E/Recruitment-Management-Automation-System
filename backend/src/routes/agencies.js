@@ -15,10 +15,11 @@ function generateAgencyCode(name) {
 // List agencies
 router.get('/', authenticate, authorize(...HR_ROLES), async (req, res) => {
   try {
-    const { search, status, tier, page = 1, limit = 20 } = req.query;
+    const { search, status, tier, agencyType, page = 1, limit = 20 } = req.query;
     const where = { deletedAt: null };
     if (status) where.status = status;
     if (tier) where.tier = tier;
+    if (agencyType) where.agencyType = agencyType;
     if (search) {
       where.OR = [
         { name: { contains: search } },

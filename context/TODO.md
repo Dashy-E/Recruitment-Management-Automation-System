@@ -56,6 +56,25 @@
 
 ---
 
+## Completed (Session 5 — Agency Outreach & Platform Sourcing)
+
+[x] **Agency type field** — `agencyType` (HIRING | MANPOWER) added to Agency model; `GET /agencies` supports `?agencyType=` filter  
+[x] **Worker type on MRF** — `workerType` (PERMANENT | CONTRACTUAL | CASUAL) added to MRF; drives which agency type to contact  
+[x] **Geographic agency scoring** — `GET /mrf/:id/suggested-agencies` scores agencies against MRF location (city match = 2 pts, state match = 1 pt), sorts by score → tier → success rate, filters by HIRING vs MANPOWER based on `workerType`  
+[x] **MRF outreach endpoints** — `GET /mrf/:id/outreach` (history with replies), `POST /mrf/:id/outreach` (templated bulk email to selected agencies via nodemailer + `{{variable}}` substitution, creates MrfOutreach records)  
+[x] **MrfOutreach model** — tracks outreach per MRF+Agency: subject, body, status (SENT | RESPONDED | CLOSED), responseCount, replies (IncomingMail[])  
+[x] **Auto-agency detection from incoming mail** — `POST /incoming-mail` extracts sender email domain and auto-links to matching Agency record; no manual selection required  
+[x] **IncomingMail relations** — `agencyId`, `mrfId`, `outreachId` FK fields added; GET endpoints include agency, mrf, outreach relations; supports `?agencyId=` and `?mrfId=` filters  
+[x] **Express-track pipeline for MANPOWER candidates** — `POST /incoming-mail/:id/create-candidate` detects MANPOWER agency mail; creates candidate at SHORTLISTED (not APPLIED), `isExpressTrack=true`, `isContractual=true`; auto-creates CasualWorker stub; no AI screening or interview rounds required  
+[x] **Platform Sourcing** — new `/api/sourcing` route (7 endpoints); `JobPosting` model tracks platform, URL, status (ACTIVE | PAUSED | CLOSED), application count; `formatDescription()` generates platform-specific job description text (LinkedIn gets hashtags, etc.)  
+[x] **Sourcing.jsx page** — `/recruiter/sourcing`; platform pill filters, posting CRUD, auto-generate descriptions, copy-to-clipboard, application count tracking, status toggle, create-posting modal with MRF selector  
+[x] **MRFDetail.jsx 4-tab rewrite** — Overview, Candidates, Agency Outreach (geo-scored suggestions + send outreach modal + history), Job Postings tab; shows `workerType` badge in header  
+[x] **IncomingMail.jsx rewrite** — agency type badges, MRF link badge, outreach reply badge, Express Track warning for MANPOWER mails; orange "Express-Track Candidate" button vs blue "Auto-Create Candidate" button; post-creation result banner with candidate profile link  
+[x] **Candidate model extensions** — `sourcedAgencyId` (FK → Agency), `isExpressTrack` Boolean, `sourceDetail` String added  
+[x] **CandidateSource model** — added for future platform sourcing provenance tracking  
+
+---
+
 ## Infrastructure (Deployment Concerns — Not Code Changes)
 
 - [ ] **SQLite → PostgreSQL** — change `provider = "sqlite"` to `"postgresql"` in schema.prisma and update `DATABASE_URL`

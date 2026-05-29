@@ -4,7 +4,7 @@ import {
   LayoutDashboard, FileText, Users, Calendar, GraduationCap, ClipboardList,
   Mail, BarChart3, Settings, LogOut, Building2, UserCheck, BookOpen, Award,
   ShieldCheck, Database, Bell, ChevronRight, Brain, Layers, MapPin, HardHat,
-  Inbox, Send
+  Inbox, Send, Globe
 } from 'lucide-react';
 
 const portalConfig = {
@@ -37,6 +37,7 @@ const portalConfig = {
       { to: '/recruiter/agencies', label: 'Agencies', icon: Building2 },
       { to: '/recruiter/email-center', label: 'Email Center', icon: Send },
       { to: '/recruiter/incoming-mail', label: 'Incoming Mail', icon: Inbox },
+      { to: '/recruiter/sourcing', label: 'Platform Sourcing', icon: Globe },
       { to: '/recruiter/casual-workers', label: 'Casual Workers', icon: HardHat },
       { to: '/recruiter/geography', label: 'Geography', icon: MapPin },
       { to: '/recruiter/reports', label: 'Reports', icon: BarChart3 },
@@ -59,6 +60,7 @@ const portalConfig = {
       { to: '/recruiter/agencies', label: 'Agencies', icon: Building2 },
       { to: '/recruiter/email-center', label: 'Email Center', icon: Send },
       { to: '/recruiter/incoming-mail', label: 'Incoming Mail', icon: Inbox },
+      { to: '/recruiter/sourcing', label: 'Platform Sourcing', icon: Globe },
       { to: '/recruiter/casual-workers', label: 'Casual Workers', icon: HardHat },
       { to: '/recruiter/geography', label: 'Geography', icon: MapPin },
       { to: '/recruiter/reports', label: 'Reports', icon: BarChart3 },

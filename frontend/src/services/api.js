@@ -39,6 +39,9 @@ export const mrfAPI = {
   reject: (id, reason) => api.post(`/mrf/${id}/reject`, { reason }),
   submit: (id) => api.post(`/mrf/${id}/submit`),
   delete: (id) => api.delete(`/mrf/${id}`),
+  getSuggestedAgencies: (id) => api.get(`/mrf/${id}/suggested-agencies`),
+  getOutreach: (id) => api.get(`/mrf/${id}/outreach`),
+  sendOutreach: (id, data) => api.post(`/mrf/${id}/outreach`, data),
 };
 
 // Candidates
@@ -223,6 +226,16 @@ export const probationAPI = {
 export const auditLogAPI = {
   getAll: (params) => api.get('/audit-logs', { params }),
   getEntities: () => api.get('/audit-logs/entities'),
+};
+
+// Sourcing (Job Postings + Platform Tracking)
+export const sourcingAPI = {
+  getAll: (params) => api.get('/sourcing', { params }),
+  getByMrf: (mrfId) => api.get(`/sourcing/mrf/${mrfId}`),
+  generateDescription: (mrfId, platform) => api.post('/sourcing/generate-description', { mrfId, platform }),
+  create: (data) => api.post('/sourcing', data),
+  update: (id, data) => api.put(`/sourcing/${id}`, data),
+  delete: (id) => api.delete(`/sourcing/${id}`),
 };
 
 export default api;

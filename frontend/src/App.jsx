@@ -25,6 +25,7 @@ import AIScreening from './pages/recruiter/AIScreening/AIScreening';
 import CasualWorkers from './pages/recruiter/CasualWorkers/CasualWorkers';
 import GeographyIntelligence from './pages/recruiter/Geography/GeographyIntelligence';
 import IncomingMail from './pages/recruiter/IncomingMail/IncomingMail';
+import Sourcing from './pages/recruiter/Sourcing/Sourcing';
 
 // Agency Partner
 import AgencyDashboard from './pages/agency/AgencyDashboard';
@@ -115,6 +116,7 @@ const AppRoutes = () => {
         <Route path="casual-workers" element={<CasualWorkers />} />
         <Route path="geography" element={<GeographyIntelligence />} />
         <Route path="incoming-mail" element={<IncomingMail />} />
+        <Route path="sourcing" element={<Sourcing />} />
       </Route>
 
       {/* Agency Partner Portal */}

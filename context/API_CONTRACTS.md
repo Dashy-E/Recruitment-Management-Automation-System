@@ -46,12 +46,15 @@ All endpoints (except `/auth/login` and `/exams/token/:token`) require a valid J
 |---|---|---|
 | GET | `/` | Query: `status, departmentId, priority, search, page, limit` |
 | GET | `/:id` | Full MRF with candidates count |
-| POST | `/` | `{ designation, departmentId, vacancies, experience, skills[], salaryMin?, salaryMax?, location?, branch?, priority?, description? }` |
+| POST | `/` | `{ designation, departmentId, vacancies, experience, skills[], salaryMin?, salaryMax?, location?, branch?, workerType?, priority?, description? }` — `workerType`: PERMANENT (default) \| CONTRACTUAL \| CASUAL |
 | PUT | `/:id` | Update any MRF field |
 | POST | `/:id/submit` | DRAFT → PENDING |
 | POST | `/:id/approve` | PENDING → APPROVED |
 | POST | `/:id/reject` | `{ reason }` — PENDING → REJECTED |
 | DELETE | `/:id` | Soft delete |
+| GET | `/:id/suggested-agencies` | Geo-scored agency list filtered by `workerType` → `agencyType`. Returns `{ agencies[], mrfLocation }` sorted by locationScore desc → tier desc → successRate desc |
+| GET | `/:id/outreach` | Outreach history with agency, sentBy, replies (IncomingMail[]) |
+| POST | `/:id/outreach` | `{ agencyIds[], subject, body }` — sends templated email (replaces `{{agencyName}}`, `{{designation}}`, `{{vacancies}}`, `{{location}}`, `{{mrfNumber}}`, `{{experience}}`); creates MrfOutreach records; returns `{ sent[], failed[] }` |
 
 MRF number auto-generated: `MRF-YYYY-#####`
 
@@ -193,7 +196,7 @@ Route ordering note: `/my` is registered before `/:id`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/` | Query: `status, tier, search, page, limit` — HR/ADMIN only |
+| GET | `/` | Query: `status, tier, agencyType, search, page, limit` — HR/ADMIN only. `agencyType`: HIRING \| MANPOWER |
 | GET | `/my` | AGENCY_PARTNER self-service — resolves agency via `AgencyPartner.userId`; returns `{ agency, performance }` |
 | GET | `/:id` | Agency with contacts, submissions, locations |
 | POST | `/` | `{ name, contactPerson, email, phone, address?, city?, state?, specializations[]?, tier?, contractStart?, contractEnd?, notes? }` |
@@ -277,9 +280,24 @@ Agency code auto-generated: `AGY-XXX-#####`
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/` | Query: `status, page, limit` |
-| GET | `/:id` | |
-| POST | `/` | Ingest: `{ fromEmail, fromName?, subject, body?, receivedAt?, hasAttachment?, attachments[]?, messageId? }` |
-| PATCH | `/:id/process` | `{ notes? }` — mark PROCESSED |
-| POST | `/:id/create-candidate` | Auto-parse body → create Candidate; status → LINKED |
+| GET | `/` | Query: `status, agencyId, mrfId, page, limit`. Response includes `agency`, `mrf`, `outreach` relations |
+| GET | `/:id` | Full mail with agency (id, name, agencyType, email), mrf (id, mrfNumber, designation, workerType), outreach (id, subject, sentAt) |
+| POST | `/` | Ingest: `{ fromEmail, fromName?, subject, body?, receivedAt?, attachments[]?, agencyId?, mrfId?, outreachId? }`. Auto-detects agency from sender domain if `agencyId` not provided. Increments `responseCount` on linked outreach. |
+| PATCH | `/:id/process` | `{ status?, candidateId?, agencyId?, mrfId?, notes? }` — mark PROCESSED |
+| POST | `/:id/create-candidate` | Auto-parses body; if from MANPOWER agency → candidate created at SHORTLISTED, `isExpressTrack=true`, `isContractual=true`, CasualWorker stub auto-created. Standard agencies → APPLIED. Returns `{ candidate, isExpressTrack, mail }`. 409 if candidate email/phone already exists. |
 | PATCH | `/:id/discard` | Status → DISCARDED |
+
+---
+
+## Sourcing (Platform Job Postings) — `/api/sourcing`
+
+Platforms: `LINKEDIN · NAUKRI · INDEED · INTERNSHALA · MONSTER · SHINE · OTHER`
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/` | Query: `status, platform, mrfId, page, limit`. Returns postings with mrf and postedBy. |
+| GET | `/mrf/:mrfId` | All postings for a specific MRF |
+| POST | `/generate-description` | `{ mrfId, platform }` — returns `{ description, platform, platformLabel }` preview text without creating a record |
+| POST | `/` | `{ mrfId, platform, title?, description?, postUrl?, expiresAt?, notes? }` — `description` auto-generated if omitted |
+| PUT | `/:id` | `{ postUrl?, status?, applications?, notes?, expiresAt? }` — update URL, status (ACTIVE \| PAUSED \| CLOSED), or increment application count |
+| DELETE | `/:id` | Hard delete |

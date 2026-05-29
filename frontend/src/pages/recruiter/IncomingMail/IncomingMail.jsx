@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { incomingMailAPI } from '../../../services/api';
-import { Inbox, UserPlus, CheckCircle, Trash2, Paperclip, Clock, Search } from 'lucide-react';
+import { Inbox, UserPlus, CheckCircle, Trash2, Paperclip, Clock, Building2, Zap, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -17,6 +18,7 @@ export default function IncomingMail() {
   const [selected, setSelected] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [createdResult, setCreatedResult] = useState(null);
 
   const fetchMails = async () => {
     try {
@@ -26,18 +28,29 @@ export default function IncomingMail() {
     } catch { toast.error('Failed to load mails'); } finally { setLoading(false); }
   };
 
+  const refreshSelected = async (mailId) => {
+    try {
+      const res = await incomingMailAPI.getById(mailId);
+      setSelected(res.data);
+    } catch {}
+  };
+
   useEffect(() => { fetchMails(); }, [statusFilter]);
 
   const handleCreateCandidate = async (mailId) => {
     setProcessing(true);
+    setCreatedResult(null);
     try {
       const res = await incomingMailAPI.createCandidate(mailId);
-      toast.success(`Candidate profile created: ${res.data.candidate.firstName} ${res.data.candidate.lastName}`);
+      const { candidate, isExpressTrack } = res.data;
+      setCreatedResult({ candidate, isExpressTrack });
+      toast.success(
+        isExpressTrack
+          ? `Express-track candidate created: ${candidate.firstName} ${candidate.lastName} (SHORTLISTED — no screening required)`
+          : `Candidate profile created: ${candidate.firstName} ${candidate.lastName}`
+      );
       fetchMails();
-      if (selected?.id === mailId) {
-        const updated = await incomingMailAPI.getById(mailId);
-        setSelected(updated.data);
-      }
+      refreshSelected(mailId);
     } catch (err) {
       if (err.response?.status === 409) toast.error('Candidate already exists in the system');
       else toast.error('Failed to create candidate');
@@ -58,6 +71,7 @@ export default function IncomingMail() {
       await incomingMailAPI.process(mailId, { status: 'PROCESSED', notes: 'Manually marked as processed' });
       toast.success('Mail marked as processed');
       fetchMails();
+      refreshSelected(mailId);
     } catch { toast.error('Failed'); }
   };
 
@@ -99,20 +113,22 @@ export default function IncomingMail() {
                 <p className="text-sm">No emails</p>
               </div>
             ) : mails.map(m => (
-              <button
-                key={m.id}
-                onClick={() => setSelected(m)}
-                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selected?.id === m.id ? 'bg-sky-50 border-r-2 border-sky-500' : ''}`}
-              >
+              <button key={m.id} onClick={() => { setSelected(m); setCreatedResult(null); }}
+                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${selected?.id === m.id ? 'bg-sky-50 border-r-2 border-sky-500' : ''}`}>
                 <div className="flex items-start justify-between mb-1">
                   <p className="text-sm font-medium text-gray-900 truncate">{m.fromName || m.fromEmail}</p>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${STATUS_COLORS[m.status]}`}>{m.status}</span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full flex-shrink-0 ${STATUS_COLORS[m.status]}`}>{m.status}</span>
                 </div>
                 <p className="text-xs text-gray-600 truncate">{m.subject}</p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <Clock className="h-3 w-3 text-gray-400" />
                   <span className="text-xs text-gray-400">{format(new Date(m.receivedAt), 'dd MMM HH:mm')}</span>
                   {m.hasAttachment && <Paperclip className="h-3 w-3 text-gray-400" />}
+                  {m.agency && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${m.agency.agencyType === 'MANPOWER' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                      {m.agency.agencyType === 'MANPOWER' ? 'Manpower' : 'Hiring'} agency
+                    </span>
+                  )}
                 </div>
               </button>
             ))}
@@ -130,7 +146,6 @@ export default function IncomingMail() {
             </div>
           ) : (
             <>
-              {/* Header */}
               <div className="border-b border-gray-200 p-5">
                 <div className="flex items-start justify-between">
                   <div>
@@ -141,28 +156,68 @@ export default function IncomingMail() {
                   <span className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[selected.status]}`}>{selected.status}</span>
                 </div>
 
+                {/* Context badges */}
+                {(selected.agency || selected.mrf || selected.outreach) && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {selected.agency && (
+                      <div className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${selected.agency.agencyType === 'MANPOWER' ? 'bg-orange-100 text-orange-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                        <Building2 size={11} />
+                        {selected.agency.name} ({selected.agency.agencyType === 'MANPOWER' ? 'Manpower' : 'Hiring'})
+                      </div>
+                    )}
+                    {selected.mrf && (
+                      <Link to={`/recruiter/mrf/${selected.mrf.id}`} className="flex items-center gap-1.5 text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full font-medium hover:bg-blue-200">
+                        <ExternalLink size={11} />
+                        {selected.mrf.mrfNumber} — {selected.mrf.designation}
+                      </Link>
+                    )}
+                    {selected.outreach && (
+                      <div className="flex items-center gap-1.5 text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-medium">
+                        Reply to outreach sent {format(new Date(selected.outreach.sentAt), 'dd MMM')}
+                      </div>
+                    )}
+                    {selected.agency?.agencyType === 'MANPOWER' && (
+                      <div className="flex items-center gap-1.5 text-xs bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full font-medium">
+                        <Zap size={11} /> Express Track — will skip screening
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 {selected.status === 'UNPROCESSED' && (
-                  <div className="flex gap-3 mt-4">
-                    <button
-                      onClick={() => handleCreateCandidate(selected.id)}
-                      disabled={processing}
-                      className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg text-sm hover:bg-sky-700 disabled:opacity-50"
-                    >
-                      <UserPlus className="h-4 w-4" /> Auto-Create Candidate
+                  <div className="flex flex-wrap gap-3 mt-4">
+                    <button onClick={() => handleCreateCandidate(selected.id)} disabled={processing}
+                      className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm disabled:opacity-50 ${selected.agency?.agencyType === 'MANPOWER' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-sky-600 hover:bg-sky-700'}`}>
+                      {selected.agency?.agencyType === 'MANPOWER' ? <Zap className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                      {selected.agency?.agencyType === 'MANPOWER' ? 'Express-Track Candidate' : 'Auto-Create Candidate'}
                     </button>
-                    <button
-                      onClick={() => handleMarkProcessed(selected.id)}
-                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50"
-                    >
+                    <button onClick={() => handleMarkProcessed(selected.id)}
+                      className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50">
                       <CheckCircle className="h-4 w-4" /> Mark Processed
                     </button>
-                    <button
-                      onClick={() => handleDiscard(selected.id)}
-                      className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50"
-                    >
+                    <button onClick={() => handleDiscard(selected.id)}
+                      className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50">
                       <Trash2 className="h-4 w-4" /> Discard
                     </button>
+                  </div>
+                )}
+
+                {/* Express-track result banner */}
+                {createdResult && (
+                  <div className={`mt-4 rounded-lg px-4 py-3 text-sm ${createdResult.isExpressTrack ? 'bg-orange-50 border border-orange-200 text-orange-800' : 'bg-green-50 border border-green-200 text-green-800'}`}>
+                    {createdResult.isExpressTrack ? (
+                      <>
+                        <p className="font-medium flex items-center gap-1.5"><Zap size={14} /> Express-track candidate created</p>
+                        <p className="mt-0.5 text-xs">
+                          <Link to={`/recruiter/candidates/${createdResult.candidate.id}`} className="underline font-medium">
+                            {createdResult.candidate.firstName} {createdResult.candidate.lastName}
+                          </Link> — status set to SHORTLISTED, casual worker record created. No AI screening or interview rounds required.
+                        </p>
+                      </>
+                    ) : (
+                      <p>Candidate <Link to={`/recruiter/candidates/${createdResult.candidate.id}`} className="underline font-medium">{createdResult.candidate.firstName} {createdResult.candidate.lastName}</Link> created and added to the standard pipeline.</p>
+                    )}
                   </div>
                 )}
               </div>

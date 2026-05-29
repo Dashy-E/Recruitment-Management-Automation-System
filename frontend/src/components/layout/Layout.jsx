@@ -38,6 +38,7 @@ const pageTitles = {
   '/recruiter/casual-workers': 'Casual Workers',
   '/recruiter/geography': 'Geographic Intelligence',
   '/recruiter/incoming-mail': 'Incoming Mail',
+  '/recruiter/sourcing': 'Platform Sourcing',
   '/agency': 'Agency Partner Portal',
 };
 

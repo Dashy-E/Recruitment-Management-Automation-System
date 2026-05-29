@@ -37,7 +37,7 @@ recruitment app/
 │   │   ├── utils/
 │   │   │   ├── helpers.js      # generateCandidateId, createAuditLog, paginate
 │   │   │   └── mailer.js       # sendEmail — lazy nodemailer transporter
-│   │   └── routes/             # 20 route files (one per domain)
+│   │   └── routes/             # 21 route files (one per domain)
 │   └── uploads/                # Multer-stored resumes & documents
 ├── frontend/
 │   └── src/
@@ -100,7 +100,7 @@ Browser → Axios (api.js)
 | auth.js | /api/auth | Login, me, password change — rate-limited |
 | users.js | /api/users | User CRUD, role filter, pagination |
 | departments.js | /api/departments | Department CRUD, includeInactive param |
-| mrf.js | /api/mrf | MRF lifecycle, approval workflow |
+| mrf.js | /api/mrf | MRF lifecycle, approval workflow, agency outreach endpoints |
 | candidates.js | /api/candidates | Candidate CRUD, documents, comments, bulk CSV import |
 | interviews.js | /api/interviews | Scheduling, feedback, today's list |
 | training.js | /api/training | Batches, enrollment, attendance |
@@ -110,13 +110,14 @@ Browser → Axios (api.js)
 | reports.js | /api/reports | Dashboard KPIs, cross-domain stats |
 | notifications.js | /api/notifications | Per-user notification inbox |
 | auditLogs.js | /api/audit-logs | ADMIN-only; paginated log viewer, entity filter |
-| agencies.js | /api/agencies | Agency CRUD, contacts, submissions, performance, partner self-service (`/my`) |
+| agencies.js | /api/agencies | Agency CRUD, contacts, submissions, performance, partner self-service (`/my`), `agencyType` filter |
 | communications.js | /api/communications | Email templates, bulk send via nodemailer, history |
 | geography.js | /api/geography | Location CRUD, state grouping, intelligence |
 | aiScreening.js | /api/ai-screening | JD upsert, TF-IDF-style scoring, batch screen |
 | pipeline.js | /api/pipeline | Kanban stages per MRF, candidate move |
 | casualWorkers.js | /api/casual-workers | Fast-track onboard, Aadhaar/PAN verify |
-| incomingMail.js | /api/incoming-mail | Mail inbox, auto-parse to candidate |
+| incomingMail.js | /api/incoming-mail | Mail inbox, auto-agency detection, express-track candidate creation |
+| sourcing.js | /api/sourcing | Platform job posting tracker, description generator |
 
 ## AI Screening (built-in, no external dependency)
 
@@ -147,3 +148,8 @@ Recommendations: STRONGLY_RECOMMENDED (≥75) · RECOMMENDED (≥55) · CONSIDER
 - **`@@unique([batchId, candidateId, date])`** on TrainingAttendance prevents duplicate attendance marks.
 - **Employee↔Candidate link**: no direct FK. Bridge is `email` — `GET /offers/mine` resolves via `req.user.email` → `prisma.candidate.findFirst({ where: { email } })`.
 - **Agency partner scoping**: AGENCY_PARTNER blocked from `GET /agencies`. Must use `GET /agencies/my` which resolves via `AgencyPartner.userId`.
+- **Agency type routing**: `agencyType` on Agency (HIRING | MANPOWER) and `workerType` on MRF (PERMANENT | CONTRACTUAL | CASUAL) drive which agencies appear in `GET /mrf/:id/suggested-agencies`. PERMANENT MRFs → HIRING agencies; CONTRACTUAL/CASUAL MRFs → MANPOWER agencies.
+- **Geographic agency scoring**: `suggested-agencies` scores each agency by substring match of its `city`/`state` against the MRF's `location + branch` string (city match = 2 pts, state match = 1 pt). Sorted: score desc → tier desc → successRate desc.
+- **Express-track pipeline**: Incoming mail from a MANPOWER agency creates candidate at SHORTLISTED (not APPLIED), sets `isExpressTrack=true` and `isContractual=true`, and auto-creates a CasualWorker stub. Skips AI screening and interview scheduling entirely.
+- **Auto-agency detection**: `POST /incoming-mail` extracts the sender email domain and queries `Agency.email CONTAINS domain` to auto-link an agency without manual selection.
+- **Outreach template variables**: `POST /mrf/:id/outreach` replaces `{{agencyName}}`, `{{designation}}`, `{{vacancies}}`, `{{location}}`, `{{mrfNumber}}`, `{{experience}}` in the template body before dispatch.

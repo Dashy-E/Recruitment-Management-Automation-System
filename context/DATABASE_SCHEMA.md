@@ -49,9 +49,12 @@ Schema: `backend/prisma/schema.prisma`
 | location / branch / country | String? | |
 | status | String | DRAFT → PENDING → APPROVED / REJECTED → CLOSED |
 | priority | String | LOW · NORMAL · HIGH · URGENT |
+| workerType | String | PERMANENT (default) · CONTRACTUAL · CASUAL — drives HIRING vs MANPOWER agency selection |
 | description | String? | |
 | rejectionReason | String? | populated on reject |
 | createdById / approvedById | String | FK → User |
+
+Relations: `outreach MrfOutreach[]` · `incomingMails IncomingMail[]` · `jobPostings JobPosting[]`
 
 ---
 
@@ -77,6 +80,9 @@ Schema: `backend/prisma/schema.prisma`
 | resumePath | String? | relative path under `uploads/` |
 | aadhaarNumber / panNumber | String? | contractual workers |
 | isContractual | Boolean | default false |
+| sourcedAgencyId | String? | FK → Agency — set when created from incoming mail |
+| isExpressTrack | Boolean | default false — true for MANPOWER agency candidates; skips screening |
+| sourceDetail | String? | e.g. sender email for agency mail sourcing |
 | addedById | String | FK → User |
 | deletedAt | DateTime? | soft delete |
 
@@ -202,11 +208,14 @@ Approval chain: BRANCH_MANAGER (or ADMIN) → COUNTRY_MANAGER → MD. Only after
 | Field | Type | Notes |
 |---|---|---|
 | agencyCode | String | unique, format `AGY-XXX-#####` |
+| agencyType | String | HIRING (default) · MANPOWER — HIRING for office/permanent staff; MANPOWER for contractual/casual workers |
 | tier | String | STANDARD · PREFERRED · PREMIUM |
 | status | String | ACTIVE · INACTIVE · BLACKLISTED |
 | totalSubmissions / successfulHires | Int | denormalised counters |
 | specializations | String | JSON array |
 | deletedAt | DateTime? | soft delete |
+
+Relations: `sourcedCandidates Candidate[]` · `outreachSent MrfOutreach[]` · `incomingMails IncomingMail[]`
 
 ### AgencyContact
 Multiple contacts per agency. `isPrimary` flags the main contact.
@@ -222,6 +231,53 @@ Used by `GET /agencies/my` to resolve the partner's own agency.
 
 ### AgencyLocation
 `@@unique([agencyId, locationId])` — many-to-many Agency ↔ Location with `isPrimary` flag.
+
+---
+
+## Outreach & Sourcing Models
+
+### MrfOutreach
+Tracks email outreach sent from an MRF to an Agency.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | cuid | PK |
+| mrfId | String | FK → MRF |
+| agencyId | String | FK → Agency |
+| sentById | String | FK → User |
+| subject / body | String | email content (post-variable-substitution) |
+| status | String | SENT · RESPONDED · CLOSED |
+| responseCount | Int | incremented each time a reply IncomingMail is received |
+| sentAt | DateTime | |
+
+Relations: `replies IncomingMail[]`
+
+### JobPosting
+Tracks where an MRF has been posted on external platforms.
+
+| Field | Type | Notes |
+|---|---|---|
+| id | cuid | PK |
+| mrfId | String | FK → MRF |
+| platform | String | LINKEDIN · NAUKRI · INDEED · INTERNSHALA · MONSTER · SHINE · OTHER |
+| title / description | String | |
+| status | String | ACTIVE · PAUSED · CLOSED |
+| postedAt | DateTime | |
+| expiresAt | DateTime? | |
+| postUrl | String? | link to live posting |
+| applications | Int | manually tracked count |
+| postedById | String | FK → User |
+| notes | String? | |
+
+### CandidateSource
+Records sourcing provenance for a candidate (future use — platform, URL, raw data).
+
+| Field | Type |
+|---|---|
+| candidateId | FK → Candidate |
+| source / platform / url | String? |
+| postedAt / importedAt | DateTime |
+| rawData | String? |
 
 ---
 
@@ -282,6 +338,11 @@ Status: UNPROCESSED → PROCESSED / LINKED / DISCARDED
 `messageId @unique` — deduplicates imported emails.  
 `candidateId` populated after auto-parse creates a Candidate record.  
 Fields: `fromEmail`, `fromName`, `subject`, `body`, `hasAttachment`, `attachments` (JSON), `receivedAt`
+
+New relation fields (Session 5):
+- `agencyId` FK → Agency — auto-detected from sender email domain or manually linked
+- `mrfId` FK → MRF — links mail to the specific requisition it relates to
+- `outreachId` FK → MrfOutreach — populated when mail is a reply to an outreach email; triggers `responseCount` increment
 
 ---
 
