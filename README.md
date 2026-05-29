@@ -1,120 +1,55 @@
-# RecruitPro — Enterprise Recruitment ERP
+# RecruitPro ERP
 
-A full-stack enterprise recruitment management system that automates the complete hiring lifecycle — from manpower requisition through candidate onboarding, training, examination, and probation confirmation.
+A full-stack recruitment management system covering the entire hiring lifecycle — from manpower requisition through onboarding, training, examination, and probation — across 10 role-based portals.
 
 ---
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Project Structure](#project-structure)
 - [Tech Stack](#tech-stack)
 - [Portals & Roles](#portals--roles)
 - [Modules](#modules)
-- [API Reference](#api-reference)
-- [Database Schema](#database-schema)
 - [Demo Accounts](#demo-accounts)
+- [API Reference](#api-reference)
 - [Environment Variables](#environment-variables)
 - [Scripts](#scripts)
+- [Candidate Status Flow](#candidate-status-flow)
+- [Business Rules](#business-rules)
+- [Project Structure](#project-structure)
+- [Production Checklist](#production-checklist)
 
 ---
 
 ## Quick Start
 
-### Option 1 — One-click (Windows)
-
-Double-click `start.bat` in the project root. It opens both servers in separate terminal windows.
-
-### Option 2 — Manual
-
-**Backend** (Terminal 1):
-```bash
-cd backend
-node src/server.js
-```
-
-**Frontend** (Terminal 2):
-```bash
-cd frontend
-npm run dev
-```
-
-Open **http://localhost:5173** in your browser.
-
-### First-time Setup
-
-If running for the first time after cloning:
+### First-time setup
 
 ```bash
-# Backend setup
+# Backend
 cd backend
 npm install
 npx prisma generate
 npx prisma migrate dev --name init
 node prisma/seed.js
+npm run dev
 
-# Frontend setup
-cd ../frontend
+# Frontend (separate terminal)
+cd frontend
 npm install
 npm run dev
 ```
 
----
+Open **http://localhost:5173** in your browser.
 
-## Project Structure
+### Subsequent runs
 
-```
-recruitment app/
-├── start.bat                  # One-click launcher (Windows)
-│
-├── frontend/                  # React + Vite application (port 5173)
-│   ├── src/
-│   │   ├── App.jsx            # Root router with role-based routing
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx
-│   │   ├── services/
-│   │   │   └── api.js         # All API client functions (axios)
-│   │   ├── components/
-│   │   │   ├── layout/        # Sidebar, Header, Layout
-│   │   │   └── common/        # StatusBadge, Modal, KPICard
-│   │   └── pages/
-│   │       ├── auth/          # Login page
-│   │       ├── recruiter/     # MRF, Candidates, Interviews, Training,
-│   │       │                  # Exams, Offers, Reports, Dashboard
-│   │       ├── employee/      # Profile, Documents, Training, Exams
-│   │       ├── training/      # Batches, Attendance, Dashboard
-│   │       ├── management/    # Analytics Dashboard, Reports
-│   │       └── admin/         # User Management, Dashboard
-│   ├── package.json
-│   ├── vite.config.js
-│   └── tailwind.config.js
-│
-└── backend/                   # Express + Prisma API (port 5000)
-    ├── src/
-    │   ├── server.js          # Express app entry point
-    │   ├── routes/
-    │   │   ├── auth.js        # Login, /me, change-password
-    │   │   ├── mrf.js         # MRF CRUD + approval workflow
-    │   │   ├── candidates.js  # Candidate CRUD + docs + comments
-    │   │   ├── interviews.js  # Schedule + feedback + complete/cancel
-    │   │   ├── training.js    # Batches + enrollment + attendance
-    │   │   ├── exams.js       # Exam link generation + results
-    │   │   ├── offers.js      # Offer + appointment letters
-    │   │   ├── reports.js     # Dashboard + all report endpoints
-    │   │   ├── users.js       # User CRUD (admin)
-    │   │   ├── notifications.js
-    │   │   └── departments.js
-    │   ├── middleware/
-    │   │   └── auth.js        # JWT authenticate + authorize
-    │   └── utils/
-    │       └── helpers.js     # ID generators, audit log, notifications
-    ├── prisma/
-    │   ├── schema.prisma      # Full database schema (SQLite)
-    │   ├── seed.js            # Demo data seeder
-    │   └── migrations/        # Auto-generated migration files
-    ├── uploads/               # Uploaded resumes and documents
-    ├── .env                   # Environment configuration
-    └── package.json
+```bash
+# Terminal 1
+cd backend && npm run dev
+
+# Terminal 2
+cd frontend && npm run dev
 ```
 
 ---
@@ -123,244 +58,132 @@ recruitment app/
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 19, Vite 8, TailwindCSS 3 |
-| Routing | React Router DOM 6 |
-| Charts | Recharts |
-| Icons | Lucide React |
-| HTTP Client | Axios |
-| Notifications | React Hot Toast |
-| Date Handling | date-fns |
-| Backend | Node.js, Express 4 |
+| Frontend | React 19, Vite 8, TailwindCSS 3, React Router 6 |
+| Backend | Node.js 20+, Express 4, ES Modules |
 | ORM | Prisma 5 |
-| Database | SQLite (dev) — swap `DATABASE_URL` for PostgreSQL/MySQL in production |
-| Authentication | JWT (jsonwebtoken), bcryptjs |
-| File Uploads | Multer |
-| Email | Nodemailer (SMTP) |
+| Database | SQLite (dev) — swap to PostgreSQL for production |
+| Auth | JWT + bcryptjs; login rate-limited (20 req / 15 min) |
+| Email | nodemailer — console fallback when SMTP is unconfigured |
+| Charts | Recharts |
+| File uploads | Multer (disk for resumes; memory for CSV import) |
+| Icons | lucide-react |
+| Toasts | react-hot-toast |
+| Dates | date-fns |
+| HTTP client | Axios |
 
 ---
 
 ## Portals & Roles
 
-The application serves five separate portals under one codebase, each with its own sidebar, navigation, and page access.
-
-| Portal URL | Roles Allowed | Primary Purpose |
+| Portal URL | Roles | Purpose |
 |---|---|---|
-| `/recruiter` | HR, RECRUITER, INTERVIEWER, ADMIN | End-to-end hiring lifecycle |
-| `/employee` | EMPLOYEE, ADMIN | Candidate self-service |
-| `/training` | TRAINING, ADMIN | Batch and attendance management |
-| `/management` | BRANCH_MANAGER, COUNTRY_MANAGER, MD, ADMIN | Analytics and approvals |
-| `/admin` | ADMIN | User, role, and system management |
+| `/admin` | ADMIN | Users, departments, audit logs, settings |
+| `/recruiter` | HR, RECRUITER, INTERVIEWER | End-to-end hiring lifecycle |
+| `/training` | TRAINING | Batch and attendance management |
+| `/management` | BRANCH_MANAGER, COUNTRY_MANAGER, MD | Approvals, probation, analytics |
+| `/employee` | EMPLOYEE | Offer letter self-service |
+| `/agency` | AGENCY_PARTNER | Own agency profile and submissions |
 
 ---
 
 ## Modules
 
-### Module 1 — MRF Management (`/recruiter/mrf`)
-- Create, edit, submit, approve, and reject Manpower Requisition Forms
-- Priority levels: Low / Normal / High / Urgent
-- Approval workflow: Draft → Pending → Approved / Rejected
-- Skills tagging, CTC range, location, reporting manager
-- Candidate count per MRF, detailed view with candidate list
+### Admin
+- **User management** — create/edit users, assign roles and departments, activate/deactivate, soft-delete
+- **Department management** — card grid with user-count avatars, create/edit modal, activate/deactivate
+- **Audit logs** — paginated event log filterable by entity (Candidate, MRF, User…) and action (CREATE, STATUS_CHANGE…)
+- **System settings** — General, Security, Notifications, Data & Storage (localStorage-persisted)
 
-### Module 2 — Candidate Management (`/recruiter/candidates`)
-- Add candidates manually or with resume upload (PDF, DOC, DOCX)
-- Duplicate detection by email and phone
-- Status pipeline with inline status change dropdown
-- Full detail view with tabbed interface:
-  - Overview (personal + professional details, skills)
-  - Interviews (all rounds, feedback, scores)
-  - Documents (upload and verify documents)
-  - Notes (add/edit comments with history)
-  - Training (enrollment status and batch info)
-  - Exams (attempt history, scores, links)
-  - Offer (offer letter summary)
-
-### Module 3 — Interview Management (`/recruiter/interviews`)
-- Schedule interviews with round number, type, mode, and meeting link
-- Panel assignment, duration, and notes
-- Mark complete or cancel with reason
-- Submit structured feedback: Technical / Communication / Problem Solving / Culture Fit scores
-- Recommendation levels: Strongly Recommend → Not Recommend
-- Average score calculation across interviewers
-
-### Module 4 — Training Coordination (`/recruiter/training`)
-- Create training batches with dates, trainer, location, and capacity
-- Enroll candidates with "Selected" status into batches
-- Batch status: Upcoming / Ongoing / Completed
-
-### Module 5 — Examination Management (`/recruiter/exams`)
-- Generate exam links with configurable passing score and expiry
-- Candidate must have completed training before a link can be generated
-- Maximum 2 attempts enforced
-- Record scores and pass/fail results
-- Copy exam link to clipboard
-
-### Module 6 — Offer Letters (`/recruiter/offers`)
-- Auto-calculates HRA, Gross, Net, and annual CTC from Basic Salary input
-- Approval workflow: Draft → Approved → Sent → Accepted / Rejected
-- Configurable expiry date
-- Generate appointment letters separately
-
-### Module 7 — Training Portal (`/training`)
-- Dashboard with batch KPIs
-- View enrolled candidates per batch
-- Mark candidates as training complete (triggers Exam Pending status)
-- Attendance marking with date picker and per-candidate present/absent toggle
-
-### Module 8 — Management Portal (`/management`)
-- Full pipeline overview with bar chart (monthly hiring trend) and pie chart (status breakdown)
-- KPI cards: Total Candidates, Active MRFs, In Training, Exam Pending, Offers Sent, Interviews
-- Full candidate pipeline report with CSV export
-
-### Module 9 — Admin Portal (`/admin`)
-- User CRUD with password, role, and department assignment
-- Toggle active/inactive status
-- Role distribution bar chart
-- Department user count overview
-
-### Module 10 — Reports (`/recruiter/reports`)
-- Five report types: Candidate, Interview, Training, Exam, MRF
-- Date range filters
-- CSV export for all reports
-
----
-
-## API Reference
-
-Base URL: `http://localhost:5000/api`
-
-All protected routes require: `Authorization: Bearer <token>`
-
-### Authentication
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/login` | Login with email + password |
-| GET | `/auth/me` | Get current user |
-| PUT | `/auth/change-password` | Change password |
-
-### MRF
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/mrf` | List MRFs (with pagination, filters) |
-| POST | `/mrf` | Create MRF |
-| GET | `/mrf/:id` | Get MRF detail |
-| PUT | `/mrf/:id` | Update MRF |
-| POST | `/mrf/:id/submit` | Submit for approval |
-| POST | `/mrf/:id/approve` | Approve MRF |
-| POST | `/mrf/:id/reject` | Reject with reason |
-| DELETE | `/mrf/:id` | Soft delete |
+### MRF (Manpower Requisition)
+- Lifecycle: DRAFT → PENDING → APPROVED / REJECTED → CLOSED
+- Priority levels: LOW · NORMAL · HIGH · URGENT
+- Auto-generated ID: `MRF-YYYY-#####`
+- Skills tagging, CTC range, location, branch
 
 ### Candidates
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/candidates` | List candidates (paginated, filterable) |
-| POST | `/candidates` | Add candidate (multipart/form-data) |
-| GET | `/candidates/:id` | Full candidate detail |
-| PUT | `/candidates/:id` | Update candidate |
-| PATCH | `/candidates/:id/status` | Update status only |
-| POST | `/candidates/:id/documents` | Upload document |
-| POST | `/candidates/:id/comments` | Add comment |
-| PUT | `/candidates/:id/comments/:cid` | Edit comment |
-| DELETE | `/candidates/:id` | Soft delete |
+- CRUD with resume upload (PDF, DOC, DOCX)
+- Bulk CSV import — returns `{ created, skipped, errors[] }` with duplicate detection on email or phone
+- Inline status change dropdown in list view
+- Full detail view: overview, interviews, documents, comments, training, exams, offer
 
 ### Interviews
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/interviews` | List interviews |
-| GET | `/interviews/today` | Today's scheduled interviews |
-| POST | `/interviews` | Schedule interview |
-| PUT | `/interviews/:id` | Update interview |
-| POST | `/interviews/:id/complete` | Mark complete |
-| POST | `/interviews/:id/cancel` | Cancel with reason |
-| POST | `/interviews/:id/feedback` | Submit feedback |
+- Multi-round scheduling (TECHNICAL · HR · CULTURAL · MANAGEMENT)
+- Panel assignment, modes (ONLINE · OFFLINE · PHONE), meeting links
+- Structured feedback: Technical / Communication / Problem Solving / Culture Fit scores (1–10)
+- Mark complete or cancel with reason
 
 ### Training
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/training/batches` | List batches |
-| POST | `/training/batches` | Create batch |
-| GET | `/training/batches/:id` | Batch detail with enrollments |
-| PUT | `/training/batches/:id` | Update batch |
-| POST | `/training/batches/:id/enroll` | Enroll candidates |
-| PUT | `/training/enrollments/:id` | Update enrollment status |
-| POST | `/training/attendance` | Mark attendance (bulk) |
-| GET | `/training/attendance/:batchId` | Get attendance records |
+- Batch management with capacity, trainer, dates, status (UPCOMING · ONGOING · COMPLETED)
+- Candidate enrollment; update enrollment status (ENROLLED → COMPLETED / DROPPED)
+- Daily attendance marking per candidate
+- Training Reports: KPI cards, batch progress bars, enrollment breakdown
 
 ### Exams
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/exams` | List exam attempts |
-| POST | `/exams/generate-link` | Generate exam link |
-| PUT | `/exams/:id/result` | Record result |
-| GET | `/exams/token/:token` | Get exam by token (public) |
+- Token-based exam links with configurable passing score and expiry
+- Public link: `/exams/token/:token` (no auth required)
+- Record scores and pass/fail results; max 2 attempts enforced
 
 ### Offers
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/offers` | List offer letters |
-| POST | `/offers` | Create offer letter |
-| GET | `/offers/:id` | Get offer detail |
-| PUT | `/offers/:id` | Update offer |
-| POST | `/offers/:id/approve` | Approve offer |
-| POST | `/offers/:id/send` | Mark as sent |
-| POST | `/offers/:id/accept` | Record acceptance |
-| POST | `/offers/:id/reject` | Record rejection |
-| GET | `/offers/appointments/all` | List appointment letters |
-| POST | `/offers/appointments` | Create appointment letter |
+- Full salary breakdown: Basic → HRA → Allowances → Deductions → Gross → Net → CTC
+- Workflow: DRAFT → APPROVED → SENT → ACCEPTED / REJECTED
+- Auto-generated ID: `OFF-YYYY-#####`
+- Appointment letters generated post-acceptance
+
+### Probation
+- Three-level approval chain: Branch Manager → Country Manager → MD
+- When all three approve, status → PASSED and candidate.status → CONFIRMED
+- Extend with new end date and reason; fail with reason
+- Days-left countdown in list view (red if overdue, orange if ≤14 days)
+
+### Approvals (Management)
+- Pending MRFs and draft offer letters awaiting MD/management action
+- Reject modal with required reason field
+
+### Recruitment Pipeline
+- Kanban board per MRF with 6 default stages (Applied → Screening → Interview → Offer → Hired → Rejected)
+- Custom stages with colour; moving a candidate removes prior stage entries
+
+### AI Screening
+- No external dependency — built-in TF-IDF scorer
+- Score = skill match (50%) + experience fit (30%) + text similarity (20%)
+- Recommendations: STRONGLY_RECOMMENDED (≥75) · RECOMMENDED (≥55) · CONSIDER (≥35) · NOT_RECOMMENDED (<35)
+- Batch screening per MRF
+
+### Agency Management
+- Agency directory with tier (STANDARD · PREFERRED · PREMIUM) and status (ACTIVE · BLACKLISTED)
+- Contacts, submissions linked to MRF + Candidate, performance metrics (success rate, placements)
+- Agency Partner self-service: own agency resolved via `AgencyPartner.userId` — no HR access required
+
+### Communications
+- Email templates with `{{variable}}` substitution and preview
+- Bulk send via nodemailer; history logged with status and failure reason
+- Console fallback in dev when SMTP is unconfigured
+
+### Geographic Intelligence
+- Location cards grouped by state and zone
+- Agency-to-location assignment
+- Intelligence view: candidate count, active candidates, agency count per location
+
+### Casual Workers
+- Fast-track onboard: creates Candidate + CasualWorker atomically
+- Worker types: CASUAL · CONTRACT · TEMPORARY
+- Aadhaar/PAN verification flags
+
+### Incoming Mail
+- Ingest raw emails; auto-parse body to extract candidate fields and create a Candidate record
+- Status: UNPROCESSED → PROCESSED / LINKED / DISCARDED
+- Deduplicates on `messageId`
 
 ### Reports
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/reports/dashboard` | KPI stats + charts data |
-| GET | `/reports/candidates` | Candidate report (filterable) |
-| GET | `/reports/interviews` | Interview report |
-| GET | `/reports/training` | Training batch report |
-| GET | `/reports/exams` | Exam report |
-| GET | `/reports/mrf` | MRF report |
-
-### Users & Departments
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/users` | List all users (admin) |
-| POST | `/users` | Create user (admin/HR) |
-| PUT | `/users/:id` | Update user |
-| PATCH | `/users/:id/toggle-status` | Activate / deactivate |
-| DELETE | `/users/:id` | Soft delete |
-| GET | `/users/interviewers` | Users eligible as interviewers |
-| GET | `/departments` | List all departments |
-
----
-
-## Database Schema
-
-Key tables and their relationships:
-
-```
-User ──── Department
-  │
-  ├── MRF ──── Candidate
-  │               │
-  │               ├── CandidateDocument
-  │               ├── CandidateComment
-  │               ├── Interview ──── InterviewFeedback
-  │               ├── Assessment
-  │               ├── TrainingEnrollment ──── TrainingBatch ──── TrainingAttendance
-  │               ├── ExamAttempt
-  │               ├── OfferLetter
-  │               ├── AppointmentLetter
-  │               └── Probation
-  │
-  ├── Notification
-  └── AuditLog
-```
-
-All destructive operations use soft deletes (`deletedAt` timestamp). Critical status changes are written to `AuditLog`.
+- Five report types: Candidate, Interview, Training, Exam, MRF
+- Date-range filters and status filters
+- CSV export with dated filename
 
 ---
 
 ## Demo Accounts
 
-All accounts use password: **`Admin@123`**
+All accounts use password **`Admin@123`**.
 
 | Email | Role | Portal |
 |---|---|---|
@@ -373,8 +196,41 @@ All accounts use password: **`Admin@123`**
 | country@recruitment.com | COUNTRY_MANAGER | /management |
 | md@recruitment.com | MD | /management |
 | employee@recruitment.com | EMPLOYEE | /employee |
+| agency@recruitment.com | AGENCY_PARTNER | /agency |
 
-The login page includes quick-access buttons for all demo accounts.
+---
+
+## API Reference
+
+Base URL: `http://localhost:5000/api`  
+All protected routes require `Authorization: Bearer <jwt>`.
+
+For the full contract (query params, request bodies, response shapes) see [context/API_CONTRACTS.md](context/API_CONTRACTS.md).
+
+### Quick reference
+
+| Domain | Base path | Notes |
+|---|---|---|
+| Auth | `/auth` | `/login` rate-limited |
+| Users | `/users` | Pagination: `page, limit, search, role` |
+| Departments | `/departments` | `?includeInactive=true` |
+| MRF | `/mrf` | Full lifecycle |
+| Candidates | `/candidates` | Includes `POST /import/csv` |
+| Interviews | `/interviews` | |
+| Training | `/training` | Batches, enrollment, attendance |
+| Exams | `/exams` | `/token/:token` is public |
+| Offers | `/offers` | `/mine` for employee self-service |
+| Probation | `/probation` | Role-aware approve endpoint |
+| Reports | `/reports` | |
+| Notifications | `/notifications` | |
+| Audit Logs | `/audit-logs` | ADMIN only |
+| Agencies | `/agencies` | `/my` for AGENCY_PARTNER |
+| Communications | `/communications` | Templates + bulk send |
+| Geography | `/geography` | Locations, states, intelligence |
+| AI Screening | `/ai-screening` | JD upsert, score, batch |
+| Pipeline | `/pipeline` | Kanban per MRF |
+| Casual Workers | `/casual-workers` | |
+| Incoming Mail | `/incoming-mail` | |
 
 ---
 
@@ -383,26 +239,20 @@ The login page includes quick-access buttons for all demo accounts.
 File: `backend/.env`
 
 ```env
-# Database
-DATABASE_URL="file:./dev.db"           # SQLite (dev). Change to postgres:// for production.
-
-# JWT
-JWT_SECRET="your_secret_key_here"      # Change this in production
+DATABASE_URL="file:./dev.db"
+JWT_SECRET="change-me-in-production"
 JWT_EXPIRES_IN="7d"
-
-# Server
 PORT=5000
-FRONTEND_URL="http://localhost:5173"   # For CORS
+FRONTEND_URL="http://localhost:5173"
 
-# Email (optional — leave blank to disable email sending)
+# Email — leave SMTP_USER/SMTP_PASS blank to log emails to console in dev
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT=587
 SMTP_USER=""
 SMTP_PASS=""
 SMTP_FROM="noreply@recruitment-erp.com"
 
-# Uploads
-MAX_FILE_SIZE=10485760                 # 10 MB
+MAX_FILE_SIZE=10485760
 UPLOAD_DIR="uploads"
 ```
 
@@ -410,26 +260,25 @@ UPLOAD_DIR="uploads"
 
 ## Scripts
 
-### Backend
+### Backend (`cd backend`)
 
 ```bash
-cd backend
-npm run dev           # Start with nodemon (auto-reload)
-npm run start         # Start without auto-reload
-npm run db:migrate    # Run Prisma migrations
-npm run db:seed       # Seed demo data
-npm run db:studio     # Open Prisma Studio (database GUI)
-npm run db:reset      # Drop and recreate database
+npm run dev          # nodemon — auto-reload on changes
+npm run start        # plain node (no reload)
+npm run db:migrate   # run Prisma migrations
+npm run db:seed      # seed demo data
+npm run db:studio    # Prisma Studio — visual DB browser
+npm run db:reset     # drop and recreate database
+npm run setup        # full first-time setup (install + migrate + seed)
 ```
 
-### Frontend
+### Frontend (`cd frontend`)
 
 ```bash
-cd frontend
-npm run dev           # Start Vite dev server
-npm run build         # Production build
-npm run preview       # Preview production build locally
-npm run lint          # Run ESLint
+npm run dev          # Vite dev server
+npm run build        # production build
+npm run preview      # preview production build locally
+npm run lint         # ESLint
 ```
 
 ---
@@ -446,35 +295,82 @@ APPLIED
                     └── TRAINING_PENDING
                           └── TRAINING_IN_PROGRESS
                                 └── EXAM_PENDING
-                                      ├── REJECTED (fail after 2 attempts)
+                                      ├── REJECTED  (fail, 2 attempts used)
                                       └── EXAM_COMPLETED
                                             └── OFFER_SENT
                                                   ├── OFFER_REJECTED
                                                   └── OFFER_ACCEPTED
                                                         └── ONBOARDED
-                                                              └── PROBATION
-                                                                    └── CONFIRMED
+                                                              └── CONFIRMED  (probation passed)
 ```
 
 ---
 
 ## Business Rules
 
-- **Duplicate detection** — Candidates with matching email or phone are flagged on creation
-- **Exam eligibility** — Training enrollment must be `COMPLETED` before an exam link can be generated
-- **Max exam attempts** — 2 attempts maximum per candidate; 3rd attempt blocked at API level
-- **Offer creation** — Candidate must have `EXAM_COMPLETED` status
-- **MRF approval** — Roles with approval rights: HR, BRANCH_MANAGER, COUNTRY_MANAGER, MD, ADMIN
-- **Soft deletes** — No data is permanently deleted; all records retain `deletedAt` timestamps
-- **Audit logging** — All create/update/approve/status-change actions are logged with user + timestamp
+- **Duplicate detection** — candidates blocked on matching email OR phone (single create and CSV import)
+- **Exam eligibility** — training enrollment must be COMPLETED before a link can be generated
+- **Max attempts** — 2 exam attempts per candidate; 3rd attempt rejected at API level
+- **Probation chain** — all three approvals (BM + CM + MD) required before status becomes PASSED
+- **Soft deletes** — Users, Candidates, and Agencies use `deletedAt`; no hard deletes
+- **Audit logging** — CREATE, STATUS_CHANGE, and other mutations write to `AuditLog`
+- **Employee↔Candidate link** — resolved by matching `user.email` to `candidate.email` (no direct FK)
+- **Agency partner scoping** — AGENCY_PARTNER role is blocked from `GET /agencies`; must use `GET /agencies/my`
+- **Route ordering** — named paths (`/mine`, `/my`, `/today`, `/interviewers`) are always registered before `/:id`
 
 ---
 
-## Production Notes
+## Project Structure
 
-1. **Database** — Replace `DATABASE_URL` in `.env` with a PostgreSQL or MySQL connection string and re-run `npx prisma migrate dev`
-2. **JWT Secret** — Use a long random string in production (e.g. `openssl rand -hex 64`)
-3. **File storage** — Replace the local `uploads/` folder with AWS S3 or Azure Blob Storage via Multer-S3
-4. **Email** — Configure real SMTP credentials (Gmail App Password, SendGrid, AWS SES) in `.env`
-5. **CORS** — Update `FRONTEND_URL` to your production domain
-6. **HTTPS** — Place the Express server behind Nginx or use a managed hosting platform
+```
+recruitment app/
+├── README.md
+├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma        # 30+ models
+│   │   ├── seed.js              # Idempotent demo data (upsert-based)
+│   │   └── dev.db               # SQLite database file
+│   ├── src/
+│   │   ├── server.js            # Express app, CORS, route mounts
+│   │   ├── middleware/
+│   │   │   └── auth.js          # authenticate + authorize(roles...)
+│   │   ├── utils/
+│   │   │   ├── helpers.js       # generateCandidateId, createAuditLog, paginate
+│   │   │   └── mailer.js        # sendEmail with lazy nodemailer init
+│   │   └── routes/              # 20 route files, one per domain
+│   ├── uploads/                 # Multer disk storage (resumes, documents)
+│   └── .env
+├── frontend/
+│   └── src/
+│       ├── App.jsx              # BrowserRouter, all routes, ProtectedRoute
+│       ├── context/
+│       │   └── AuthContext.jsx  # JWT storage, user state, login/logout
+│       ├── components/
+│       │   ├── layout/          # Sidebar, Header, Layout (with page titles)
+│       │   └── common/          # StatusBadge, Modal, KPICard
+│       ├── pages/               # Organised by portal
+│       │   ├── admin/           # Users, Departments, AuditLogs, Settings
+│       │   ├── recruiter/       # MRF, Candidates, Interviews, Pipeline, AI, Reports…
+│       │   ├── training/        # Batches, Attendance, Reports, Dashboard
+│       │   ├── management/      # Dashboard, Approvals, Probation, Reports
+│       │   ├── employee/        # Dashboard, Offers
+│       │   └── agency/          # AgencyDashboard
+│       └── services/
+│           └── api.js           # Axios instance + 20 typed API objects
+└── context/                     # Documentation
+    ├── ARCHITECTURE.md
+    ├── API_CONTRACTS.md
+    ├── DATABASE_SCHEMA.md
+    └── TODO.md
+```
+
+---
+
+## Production Checklist
+
+- [ ] Change `provider = "sqlite"` to `"postgresql"` in `schema.prisma` and set `DATABASE_URL`
+- [ ] Set a strong random `JWT_SECRET` (e.g. `openssl rand -hex 64`)
+- [ ] Configure `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` for real email
+- [ ] Update `FRONTEND_URL` to the production domain (CORS)
+- [ ] Move `uploads/` to S3 or equivalent object storage
+- [ ] Place Express behind a reverse proxy (nginx / Caddy) with TLS
