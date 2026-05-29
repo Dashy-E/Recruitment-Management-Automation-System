@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js';
 import { paginate } from '../utils/helpers.js';
+import { sendEmail } from '../utils/mailer.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -54,17 +55,52 @@ router.get('/today', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const data = {
-      ...req.body,
-      scheduledById: req.user.id,
-      panelIds: JSON.stringify(req.body.panelIds || []),
-    };
+    const { candidateId, scheduledAt, interviewType, mode, meetingLink, round, duration, notes, panelIds } = req.body;
+
+    // Validation
+    if (!candidateId) return res.status(400).json({ message: 'candidateId is required' });
+    if (!scheduledAt) return res.status(400).json({ message: 'scheduledAt is required' });
+    if (!interviewType) return res.status(400).json({ message: 'interviewType is required' });
+    if (!mode) return res.status(400).json({ message: 'mode (ONLINE/IN_PERSON/PHONE) is required' });
+
+    const scheduledDate = new Date(scheduledAt);
+    if (isNaN(scheduledDate.getTime())) return res.status(400).json({ message: 'Invalid scheduledAt date' });
+    if (scheduledDate <= new Date()) return res.status(400).json({ message: 'Interview must be scheduled in the future' });
+
+    if (mode === 'ONLINE' && !meetingLink) return res.status(400).json({ message: 'meetingLink is required for ONLINE interviews' });
+
     const interview = await prisma.interview.create({
-      data,
-      include: { candidate: { select: { firstName: true, lastName: true } } },
+      data: {
+        candidateId,
+        scheduledAt: scheduledDate,
+        interviewType,
+        mode,
+        meetingLink: meetingLink || null,
+        round: parseInt(round) || 1,
+        duration: parseInt(duration) || 60,
+        notes: notes || null,
+        panelIds: JSON.stringify(panelIds || []),
+        scheduledById: req.user.id,
+      },
+      include: {
+        candidate: { select: { firstName: true, lastName: true, email: true, designation: true } },
+        scheduledBy: { select: { firstName: true, lastName: true } },
+      },
     });
 
-    await prisma.candidate.update({ where: { id: req.body.candidateId }, data: { status: 'INTERVIEW_SCHEDULED' } });
+    await prisma.candidate.update({ where: { id: candidateId }, data: { status: 'INTERVIEW_SCHEDULED' } });
+
+    // Send automated confirmation email to candidate
+    if (interview.candidate.email) {
+      const dateStr = scheduledDate.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      const timeStr = scheduledDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      const linkLine = meetingLink ? `\nMeeting Link: ${meetingLink}` : '';
+      await sendEmail({
+        to: interview.candidate.email,
+        subject: `Interview Scheduled — Round ${interview.round} (${interviewType})`,
+        text: `Dear ${interview.candidate.firstName},\n\nYour interview has been scheduled.\n\nDate: ${dateStr}\nTime: ${timeStr}\nRound: ${interview.round}\nType: ${interviewType}\nMode: ${mode}${linkLine}\nDuration: ${interview.duration} minutes\n\nPlease be available on time.\n\nRegards,\nRecruitment Team`,
+      }).catch(err => console.warn('Interview email send failed:', err.message));
+    }
 
     res.status(201).json(interview);
   } catch (e) {

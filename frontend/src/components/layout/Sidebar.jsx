@@ -1,10 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard, FileText, Users, Calendar, GraduationCap, ClipboardList,
+  LayoutDashboard, FileText, Users, Calendar, ClipboardList,
   Mail, BarChart3, Settings, LogOut, Building2, UserCheck, BookOpen, Award,
-  ShieldCheck, Database, Bell, ChevronRight, Brain, Layers, MapPin, HardHat,
-  Inbox, Send, Globe
+  ShieldCheck, Database, Brain, Layers,
+  Inbox, Send
 } from 'lucide-react';
 
 const portalConfig = {
@@ -29,17 +29,12 @@ const portalConfig = {
       { to: '/recruiter/mrf', label: 'MRF Management', icon: FileText },
       { to: '/recruiter/candidates', label: 'Candidates', icon: Users },
       { to: '/recruiter/interviews', label: 'Interviews', icon: Calendar },
-      { to: '/recruiter/training', label: 'Training', icon: GraduationCap },
       { to: '/recruiter/exams', label: 'Examinations', icon: ClipboardList },
       { to: '/recruiter/offers', label: 'Offer Letters', icon: Mail },
       { to: '/recruiter/pipeline', label: 'Pipeline', icon: Layers },
       { to: '/recruiter/ai-screening', label: 'AI Screening', icon: Brain },
-      { to: '/recruiter/agencies', label: 'Agencies', icon: Building2 },
       { to: '/recruiter/email-center', label: 'Email Center', icon: Send },
       { to: '/recruiter/incoming-mail', label: 'Incoming Mail', icon: Inbox },
-      { to: '/recruiter/sourcing', label: 'Platform Sourcing', icon: Globe },
-      { to: '/recruiter/casual-workers', label: 'Casual Workers', icon: HardHat },
-      { to: '/recruiter/geography', label: 'Geography', icon: MapPin },
       { to: '/recruiter/reports', label: 'Reports', icon: BarChart3 },
     ],
   },
@@ -52,17 +47,12 @@ const portalConfig = {
       { to: '/recruiter/mrf', label: 'MRF Management', icon: FileText },
       { to: '/recruiter/candidates', label: 'Candidates', icon: Users },
       { to: '/recruiter/interviews', label: 'Interviews', icon: Calendar },
-      { to: '/recruiter/training', label: 'Training', icon: GraduationCap },
       { to: '/recruiter/exams', label: 'Examinations', icon: ClipboardList },
       { to: '/recruiter/offers', label: 'Offer Letters', icon: Mail },
       { to: '/recruiter/pipeline', label: 'Pipeline', icon: Layers },
       { to: '/recruiter/ai-screening', label: 'AI Screening', icon: Brain },
-      { to: '/recruiter/agencies', label: 'Agencies', icon: Building2 },
       { to: '/recruiter/email-center', label: 'Email Center', icon: Send },
       { to: '/recruiter/incoming-mail', label: 'Incoming Mail', icon: Inbox },
-      { to: '/recruiter/sourcing', label: 'Platform Sourcing', icon: Globe },
-      { to: '/recruiter/casual-workers', label: 'Casual Workers', icon: HardHat },
-      { to: '/recruiter/geography', label: 'Geography', icon: MapPin },
       { to: '/recruiter/reports', label: 'Reports', icon: BarChart3 },
     ],
   },
@@ -74,14 +64,6 @@ const portalConfig = {
       { to: '/recruiter', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/recruiter/interviews', label: 'My Interviews', icon: Calendar },
       { to: '/recruiter/candidates', label: 'Candidates', icon: Users },
-    ],
-  },
-  AGENCY_PARTNER: {
-    label: 'Agency Portal',
-    color: 'from-cyan-800 to-cyan-900',
-    accent: 'bg-cyan-700',
-    nav: [
-      { to: '/agency', label: 'Dashboard', icon: LayoutDashboard },
     ],
   },
   TRAINING: {
@@ -103,7 +85,6 @@ const portalConfig = {
       { to: '/management', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/management/reports', label: 'Reports', icon: BarChart3 },
       { to: '/management/probation', label: 'Probation', icon: Award },
-      { to: '/recruiter/mrf', label: 'MRF Overview', icon: FileText },
     ],
   },
   COUNTRY_MANAGER: {
@@ -124,6 +105,7 @@ const portalConfig = {
       { to: '/management', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/management/reports', label: 'Analytics', icon: BarChart3 },
       { to: '/management/approvals', label: 'Approvals', icon: ShieldCheck },
+      { to: '/management/probation', label: 'Probation', icon: Award },
     ],
   },
   EMPLOYEE: {
@@ -134,7 +116,6 @@ const portalConfig = {
       { to: '/employee', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/employee/profile', label: 'My Profile', icon: Users },
       { to: '/employee/documents', label: 'Documents', icon: FileText },
-      { to: '/employee/training', label: 'Training', icon: GraduationCap },
       { to: '/employee/exams', label: 'Examinations', icon: ClipboardList },
       { to: '/employee/offers', label: 'Offer Letter', icon: Mail },
     ],

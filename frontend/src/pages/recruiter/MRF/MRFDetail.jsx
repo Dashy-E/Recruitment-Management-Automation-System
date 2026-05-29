@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mrfAPI, sourcingAPI } from '../../../services/api';
+import { mrfAPI } from '../../../services/api';
 import StatusBadge from '../../../components/common/StatusBadge';
 import Modal from '../../../components/common/Modal';
 import { ArrowLeft, MapPin, Users, Calendar, DollarSign, Briefcase, Send, Globe, Mail, ChevronDown, ChevronUp, Check, Building2 } from 'lucide-react';
@@ -9,8 +9,6 @@ import toast from 'react-hot-toast';
 
 const TABS = ['Overview', 'Candidates', 'Agency Outreach', 'Job Postings'];
 
-const WORKER_TYPE_COLORS = { PERMANENT: 'bg-blue-100 text-blue-700', CONTRACTUAL: 'bg-orange-100 text-orange-700', CASUAL: 'bg-yellow-100 text-yellow-700' };
-const AGENCY_TYPE_COLORS = { HIRING: 'bg-indigo-100 text-indigo-700', MANPOWER: 'bg-orange-100 text-orange-700' };
 const PLATFORM_LABELS = { LINKEDIN: 'LinkedIn', NAUKRI: 'Naukri', INDEED: 'Indeed', INTERNSHALA: 'Internshala', MONSTER: 'Monster', SHINE: 'Shine', OTHER: 'Other' };
 const PLATFORM_COLORS = { LINKEDIN: 'bg-blue-100 text-blue-700', NAUKRI: 'bg-orange-100 text-orange-700', INDEED: 'bg-indigo-100 text-indigo-700', INTERNSHALA: 'bg-green-100 text-green-700', MONSTER: 'bg-purple-100 text-purple-700', SHINE: 'bg-yellow-100 text-yellow-700', OTHER: 'bg-gray-100 text-gray-600' };
 
@@ -120,7 +118,6 @@ HR Team`,
           <p className="text-sm text-gray-500">{mrf.mrfNumber}</p>
         </div>
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          {mrf.workerType && <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${WORKER_TYPE_COLORS[mrf.workerType] || 'bg-gray-100 text-gray-600'}`}>{mrf.workerType}</span>}
           <StatusBadge status={mrf.priority} />
           <StatusBadge status={mrf.status} />
         </div>
@@ -214,9 +211,7 @@ HR Team`,
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">
-                Suggested <span className={`font-semibold px-1.5 py-0.5 rounded text-xs ${mrf.workerType === 'PERMANENT' ? 'bg-indigo-100 text-indigo-700' : 'bg-orange-100 text-orange-700'}`}>
-                  {mrf.workerType === 'PERMANENT' ? 'Hiring' : 'Manpower'}
-                </span> agencies for <strong>{mrf.location || 'this location'}</strong>
+                Geo-scored agencies for <strong>{mrf.location || 'this location'}</strong>
               </p>
             </div>
             <button onClick={prefillOutreach} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 text-sm font-medium">
@@ -252,7 +247,6 @@ HR Team`,
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-gray-800">{a.name}</p>
-                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${AGENCY_TYPE_COLORS[a.agencyType]}`}>{a.agencyType}</span>
                             {a.locationScore === 2 && <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">City match</span>}
                             {a.locationScore === 1 && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded-full">State match</span>}
                           </div>

@@ -21,31 +21,30 @@ model User {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  department              Department?           @relation(fields: [departmentId], references: [id])
-  mrfCreated              MRF[]                 @relation("MRFCreator")
-  mrfApproved             MRF[]                 @relation("MRFApprover")
-  candidatesAdded         Candidate[]           @relation("CandidateAdder")
-  interviewsScheduled     Interview[]           @relation("InterviewScheduler")
-  interviewFeedback       InterviewFeedback[]
-  trainingBatchesManaged  TrainingBatch[]       @relation("BatchManager")
-  notifications           Notification[]
-  auditLogs               AuditLog[]
-  candidateComments       CandidateComment[]
-  agencyPartner           AgencyPartner?
-  communicationsSent      Communication[]       @relation("CommSender")
-  casualWorkersAdded      CasualWorker[]        @relation("CasualWorkerAdder")
-  incomingMailsProcessed  IncomingMail[]        @relation("MailProcessor")
-  outreachSent            MrfOutreach[]
-  jobPostings             JobPosting[]
+  department             Department?         @relation(fields: [departmentId], references: [id])
+  mrfCreated             MRF[]               @relation("MRFCreator")
+  mrfApproved            MRF[]               @relation("MRFApprover")
+  candidatesAdded        Candidate[]         @relation("CandidateAdder")
+  interviewsScheduled    Interview[]         @relation("InterviewScheduler")
+  interviewFeedback      InterviewFeedback[]
+  trainingBatchesManaged TrainingBatch[]     @relation("BatchManager")
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  candidateComments      CandidateComment[]
+  communicationsSent     Communication[]     @relation("CommSender")
+  incomingMailsProcessed IncomingMail[]      @relation("MailProcessor")
+  outreachSent           MrfOutreach[]
+  jobPostings            JobPosting[]
+  chemistryTestsAssigned ChemistryTest[]     @relation("ChemistryTestAssigner")
 }
 
 model Department {
-  id          String    @id @default(cuid())
-  name        String    @unique
+  id          String   @id @default(cuid())
+  name        String   @unique
   description String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   users User[]
   mrfs  MRF[]
@@ -67,7 +66,6 @@ model MRF {
   reportingManager String?
   status           String    @default("DRAFT")
   priority         String    @default("NORMAL")
-  workerType       String    @default("PERMANENT")
   description      String?
   createdById      String
   approvedById     String?
@@ -91,87 +89,80 @@ model MRF {
 }
 
 model Candidate {
-  id              String    @id @default(cuid())
-  candidateId     String    @unique
-  firstName       String
-  lastName        String
-  email           String    @unique
-  phone           String
-  alternatePhone  String?
-  dateOfBirth     DateTime?
-  gender          String?
-  address         String?
-  city            String?
-  state           String?
-  country         String?
-  pincode         String?
-  designation     String
-  experience      Int       @default(0)
-  currentSalary   Float?
-  expectedSalary  Float?
-  noticePeriod    Int?
-  skills          String    @default("[]")
-  education       String    @default("[]")
-  certifications  String    @default("[]")
-  currentCompany  String?
-  resumePath      String?
-  status          String    @default("APPLIED")
-  source          String?
-  sourceDetail    String?
-  mrfId           String?
-  locationId      String?
-  addedById       String
-  sourcedAgencyId String?
-  isExpressTrack  Boolean   @default(false)
-  aadhaarNumber   String?
-  panNumber       String?
-  isContractual   Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
+  id             String    @id @default(cuid())
+  candidateId    String    @unique
+  firstName      String
+  lastName       String
+  email          String    @unique
+  phone          String
+  alternatePhone String?
+  dateOfBirth    DateTime?
+  gender         String?
+  address        String?
+  city           String?
+  state          String?
+  country        String?
+  pincode        String?
+  designation    String
+  experience     Int       @default(0)
+  currentSalary  Float?
+  expectedSalary Float?
+  noticePeriod   Int?
+  skills         String    @default("[]")
+  education      String    @default("[]")
+  certifications String    @default("[]")
+  currentCompany String?
+  resumePath     String?
+  status         String    @default("APPLIED")
+  source         String?
+  sourceDetail   String?
+  mrfId          String?
+  locationId     String?
+  addedById      String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
-  mrf                MRF?                @relation(fields: [mrfId], references: [id])
-  addedBy            User                @relation("CandidateAdder", fields: [addedById], references: [id])
-  location           Location?           @relation(fields: [locationId], references: [id])
-  sourcedAgency      Agency?             @relation("AgencySourcings", fields: [sourcedAgencyId], references: [id])
-  documents          CandidateDocument[]
-  comments           CandidateComment[]
-  interviews         Interview[]
-  assessments        Assessment[]
+  mrf               MRF?                @relation(fields: [mrfId], references: [id])
+  addedBy           User                @relation("CandidateAdder", fields: [addedById], references: [id])
+  location          Location?           @relation(fields: [locationId], references: [id])
+  documents         CandidateDocument[]
+  comments          CandidateComment[]
+  interviews        Interview[]
+  assessments       Assessment[]
   trainingEnrollment TrainingEnrollment?
-  examAttempts       ExamAttempt[]
-  offerLetter        OfferLetter?
-  appointmentLetter  AppointmentLetter?
-  probation          Probation?
-  aiScreeningResult  AIScreeningResult?
-  agencySubmissions  AgencySubmission[]
-  communications     Communication[]
-  pipelineEntries    PipelineEntry[]
-  casualWorker       CasualWorker?
-  candidateSources   CandidateSource[]
+  examAttempts      ExamAttempt[]
+  offerLetter       OfferLetter?
+  appointmentLetter AppointmentLetter?
+  probation         Probation?
+  aiScreeningResult AIScreeningResult?
+  agencySubmissions AgencySubmission[]
+  communications    Communication[]
+  pipelineEntries   PipelineEntry[]
+  chemistryTests    ChemistryTest[]
 }
 
 model CandidateDocument {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   candidateId String
   docType     String
   fileName    String
   filePath    String
   fileSize    Int?
   mimeType    String?
-  verified    Boolean   @default(false)
-  uploadedAt  DateTime  @default(now())
+  verified    Boolean  @default(false)
+  uploadedAt  DateTime @default(now())
 
   candidate Candidate @relation(fields: [candidateId], references: [id])
 }
 
 model CandidateComment {
-  id            String    @id @default(cuid())
+  id            String   @id @default(cuid())
   candidateId   String
   comment       String
   commentedById String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   candidate   Candidate @relation(fields: [candidateId], references: [id])
   commentedBy User      @relation(fields: [commentedById], references: [id])
@@ -202,7 +193,7 @@ model Interview {
 }
 
 model InterviewFeedback {
-  id                  String    @id @default(cuid())
+  id                  String   @id @default(cuid())
   interviewId         String
   interviewerId       String
   technicalScore      Int?
@@ -214,7 +205,7 @@ model InterviewFeedback {
   strengths           String?
   weaknesses          String?
   comments            String?
-  createdAt           DateTime  @default(now())
+  createdAt           DateTime @default(now())
 
   interview   Interview @relation(fields: [interviewId], references: [id])
   interviewer User      @relation(fields: [interviewerId], references: [id])
@@ -239,20 +230,20 @@ model Assessment {
 }
 
 model TrainingBatch {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   batchName   String
-  batchCode   String    @unique
+  batchCode   String   @unique
   designation String
   startDate   DateTime
   endDate     DateTime
   maxCapacity Int
   trainer     String?
   location    String?
-  status      String    @default("UPCOMING")
+  status      String   @default("UPCOMING")
   managedById String
   description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   managedBy   User                 @relation("BatchManager", fields: [managedById], references: [id])
   enrollments TrainingEnrollment[]
@@ -274,14 +265,14 @@ model TrainingEnrollment {
 }
 
 model TrainingAttendance {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   batchId     String
   candidateId String
   date        DateTime
-  present     Boolean   @default(false)
+  present     Boolean  @default(false)
   remarks     String?
   markedBy    String?
-  markedAt    DateTime  @default(now())
+  markedAt    DateTime @default(now())
 
   batch TrainingBatch @relation(fields: [batchId], references: [id])
 
@@ -375,20 +366,20 @@ model Probation {
 }
 
 model Notification {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
   title     String
   message   String
-  type      String    @default("INFO")
-  read      Boolean   @default(false)
+  type      String   @default("INFO")
+  read      Boolean  @default(false)
   link      String?
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   userId    String
   action    String
   entity    String
@@ -396,7 +387,7 @@ model AuditLog {
   oldValue  String?
   newValue  String?
   ipAddress String?
-  createdAt DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -407,7 +398,6 @@ model Agency {
   id               String    @id @default(cuid())
   agencyCode       String    @unique
   name             String
-  agencyType       String    @default("HIRING")
   contactPerson    String
   email            String
   phone            String
@@ -428,13 +418,11 @@ model Agency {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
 
-  contacts          AgencyContact[]
-  submissions       AgencySubmission[]
-  partners          AgencyPartner[]
-  locations         AgencyLocation[]
-  sourcedCandidates Candidate[]    @relation("AgencySourcings")
-  outreachSent      MrfOutreach[]
-  incomingMails     IncomingMail[] @relation("AgencyIncomingMails")
+  contacts      AgencyContact[]
+  submissions   AgencySubmission[]
+  locations     AgencyLocation[]
+  outreachSent  MrfOutreach[]
+  incomingMails IncomingMail[] @relation("AgencyIncomingMails")
 }
 
 model AgencyContact {
@@ -451,29 +439,19 @@ model AgencyContact {
 }
 
 model AgencySubmission {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   agencyId    String
   mrfId       String
   candidateId String
-  submittedAt DateTime  @default(now())
-  status      String    @default("SUBMITTED")
+  submittedAt DateTime @default(now())
+  status      String   @default("SUBMITTED")
   fee         Float?
   notes       String?
-  updatedAt   DateTime  @updatedAt
+  updatedAt   DateTime @updatedAt
 
   agency    Agency    @relation(fields: [agencyId], references: [id])
   mrf       MRF       @relation(fields: [mrfId], references: [id])
   candidate Candidate @relation(fields: [candidateId], references: [id])
-}
-
-model AgencyPartner {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  agencyId  String
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id])
-  agency Agency @relation(fields: [agencyId], references: [id])
 }
 
 // ─── MRF Outreach ─────────────────────────────────────────────────────────────
@@ -495,7 +473,7 @@ model MrfOutreach {
   replies IncomingMail[]
 }
 
-// ─── Job Postings (Platform Sourcing) ────────────────────────────────────────
+// ─── Job Postings (tracking only — no public API) ────────────────────────────
 
 model JobPosting {
   id           String    @id @default(cuid())
@@ -535,30 +513,15 @@ model Location {
 }
 
 model AgencyLocation {
-  id         String   @id @default(cuid())
+  id         String  @id @default(cuid())
   agencyId   String
   locationId String
-  isPrimary  Boolean  @default(false)
+  isPrimary  Boolean @default(false)
 
   agency   Agency   @relation(fields: [agencyId], references: [id])
   location Location @relation(fields: [locationId], references: [id])
 
   @@unique([agencyId, locationId])
-}
-
-// ─── Candidate Sourcing ───────────────────────────────────────────────────────
-
-model CandidateSource {
-  id          String    @id @default(cuid())
-  candidateId String
-  source      String
-  platform    String?
-  url         String?
-  postedAt    DateTime?
-  importedAt  DateTime  @default(now())
-  rawData     String?
-
-  candidate Candidate @relation(fields: [candidateId], references: [id])
 }
 
 // ─── AI Screening ─────────────────────────────────────────────────────────────
@@ -576,21 +539,21 @@ model JobDescription {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  mrf              MRF                @relation(fields: [mrfId], references: [id])
+  mrf              MRF                 @relation(fields: [mrfId], references: [id])
   screeningResults AIScreeningResult[]
 }
 
 model AIScreeningResult {
-  id             String    @id @default(cuid())
-  candidateId    String    @unique
+  id             String   @id @default(cuid())
+  candidateId    String   @unique
   jdId           String
   matchScore     Float
-  skillsMatched  String    @default("[]")
-  skillsMissing  String    @default("[]")
+  skillsMatched  String   @default("[]")
+  skillsMissing  String   @default("[]")
   experienceGap  Int?
   recommendation String?
   summary        String?
-  processedAt    DateTime  @default(now())
+  processedAt    DateTime @default(now())
   modelVersion   String?
 
   candidate      Candidate      @relation(fields: [candidateId], references: [id])
@@ -614,17 +577,17 @@ model EmailTemplate {
 }
 
 model Communication {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   candidateId    String?
   templateId     String?
   sentById       String
   subject        String
   body           String
-  channel        String    @default("EMAIL")
-  status         String    @default("SENT")
+  channel        String   @default("EMAIL")
+  status         String   @default("SENT")
   recipientEmail String?
   recipientPhone String?
-  sentAt         DateTime  @default(now())
+  sentAt         DateTime @default(now())
   failureReason  String?
   metadata       String?
 
@@ -688,28 +651,19 @@ model IncomingMail {
   outreach    MrfOutreach? @relation(fields: [outreachId], references: [id])
 }
 
-// ─── Casual / Contractual Workers ────────────────────────────────────────────
+// ─── Chemistry Test Tracking ─────────────────────────────────────────────────
 
-model CasualWorker {
-  id              String    @id @default(cuid())
-  candidateId     String    @unique
-  workerType      String    @default("CASUAL")
-  contractStart   DateTime
-  contractEnd     DateTime?
-  dailyRate       Float?
-  monthlyRate     Float?
-  aadhaarVerified Boolean   @default(false)
-  panVerified     Boolean   @default(false)
-  bankAccount     String?
-  ifscCode        String?
-  department      String?
-  reportingTo     String?
-  siteLocation    String?
-  status          String    @default("ACTIVE")
-  addedById       String
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+model ChemistryTest {
+  id           String    @id @default(cuid())
+  candidateId  String
+  status       String    @default("PENDING")
+  testDate     DateTime?
+  remarks      String?
+  notes        String?
+  assignedById String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  candidate Candidate @relation(fields: [candidateId], references: [id])
-  addedBy   User      @relation("CasualWorkerAdder", fields: [addedById], references: [id])
+  candidate  Candidate @relation(fields: [candidateId], references: [id])
+  assignedBy User      @relation("ChemistryTestAssigner", fields: [assignedById], references: [id])
 }

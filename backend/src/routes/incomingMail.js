@@ -111,12 +111,12 @@ router.patch('/:id/process', authenticate, authorize(...HR_ROLES), async (req, r
   }
 });
 
-// Auto-parse mail and create candidate (or casual worker for MANPOWER agencies)
+// Auto-parse mail body and create a candidate record
 router.post('/:id/create-candidate', authenticate, authorize(...HR_ROLES), async (req, res) => {
   try {
     const mail = await prisma.incomingMail.findUnique({
       where: { id: req.params.id },
-      include: { agency: true, mrf: true },
+      include: { mrf: true },
     });
     if (!mail) return res.status(404).json({ error: 'Mail not found' });
 
@@ -143,8 +143,6 @@ router.post('/:id/create-candidate', authenticate, authorize(...HR_ROLES), async
     const count = await prisma.candidate.count();
     const candidateId = `C${String(count + 1).padStart(4, '0')}`;
 
-    const isManpower = mail.agency?.agencyType === 'MANPOWER';
-
     const candidate = await prisma.candidate.create({
       data: {
         candidateId,
@@ -154,33 +152,19 @@ router.post('/:id/create-candidate', authenticate, authorize(...HR_ROLES), async
         sourceDetail: mail.fromEmail,
         mrfId: mail.mrfId || null,
         addedById: req.user.id,
-        // Manpower agency candidates skip screening — start as SHORTLISTED with express track
-        status: isManpower ? 'SHORTLISTED' : 'APPLIED',
-        isContractual: isManpower,
-        isExpressTrack: isManpower,
-        sourcedAgencyId: mail.agencyId || null,
+        status: 'APPLIED',
+        skills: '[]',
+        education: '[]',
+        certifications: '[]',
       },
     });
-
-    // For manpower agencies, also create a CasualWorker stub for verification tracking
-    if (isManpower) {
-      await prisma.casualWorker.create({
-        data: {
-          candidateId: candidate.id,
-          workerType: 'CASUAL',
-          contractStart: new Date(),
-          addedById: req.user.id,
-          siteLocation: mail.mrf?.location || null,
-        },
-      });
-    }
 
     await prisma.incomingMail.update({
       where: { id: mail.id },
       data: { candidateId: candidate.id, status: 'LINKED', processedById: req.user.id, processedAt: new Date() },
     });
 
-    res.status(201).json({ candidate, isExpressTrack: isManpower, mail: { id: mail.id, status: 'LINKED' } });
+    res.status(201).json({ candidate, mail: { id: mail.id, status: 'LINKED' } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

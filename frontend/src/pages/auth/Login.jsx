@@ -14,7 +14,6 @@ const roleRedirects = {
   COUNTRY_MANAGER: '/management',
   MD: '/management',
   EMPLOYEE: '/employee',
-  AGENCY_PARTNER: '/agency',
 };
 
 const Login = () => {
@@ -41,7 +40,18 @@ const Login = () => {
     }
   };
 
-  const quickLogin = (email) => setForm({ email, password: 'Admin@123' });
+  const quickLogin = async (email) => {
+    setLoading(true);
+    try {
+      const data = await login(email, 'Admin@123');
+      toast.success(`Welcome, ${data.user.firstName}!`);
+      // Let the if (user) guard at the top redirect — avoids ProtectedRoute
+      // seeing null user before AuthContext re-render propagates
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Login failed');
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-indigo-800 to-purple-900 flex items-center justify-center p-4">
@@ -107,7 +117,6 @@ const Login = () => {
                 { label: 'Management', email: 'manager@recruitment.com' },
                 { label: 'MD', email: 'md@recruitment.com' },
                 { label: 'Employee', email: 'employee@recruitment.com' },
-                { label: 'Agency Partner', email: 'agency@recruitment.com' },
               ].map(({ label, email }) => (
                 <button
                   key={email}

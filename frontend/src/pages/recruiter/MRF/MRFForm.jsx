@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { mrfAPI, departmentAPI } from '../../../services/api';
+import { INDIAN_LOCATIONS } from '../../../constants/locations';
 import toast from 'react-hot-toast';
 import { Plus, X } from 'lucide-react';
+
+const F = ({ label, required, children }) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
+    {children}
+  </div>
+);
 
 const MRFForm = ({ mrf, onSuccess }) => {
   const [departments, setDepartments] = useState([]);
@@ -50,13 +58,6 @@ const MRFForm = ({ mrf, onSuccess }) => {
     } finally { setLoading(false); }
   };
 
-  const F = ({ label, required, children }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}{required && <span className="text-red-500 ml-0.5">*</span>}</label>
-      {children}
-    </div>
-  );
-
   const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
 
   return (
@@ -78,16 +79,16 @@ const MRFForm = ({ mrf, onSuccess }) => {
           <input type="text" value={form.experience} onChange={e => set('experience', e.target.value)} className={inputCls} placeholder="e.g. 3-5 years" />
         </F>
         <F label="Min Salary (CTC)">
-          <input type="number" value={form.salaryMin} onChange={e => set('salaryMin', e.target.value)} className={inputCls} placeholder="e.g. 500000" />
+          <input type="text" inputMode="numeric" value={form.salaryMin} onChange={e => set('salaryMin', e.target.value)} className={inputCls} placeholder="e.g. 500000" />
         </F>
         <F label="Max Salary (CTC)">
-          <input type="number" value={form.salaryMax} onChange={e => set('salaryMax', e.target.value)} className={inputCls} placeholder="e.g. 1000000" />
+          <input type="text" inputMode="numeric" value={form.salaryMax} onChange={e => set('salaryMax', e.target.value)} className={inputCls} placeholder="e.g. 1000000" />
         </F>
-        <F label="Location">
-          <input type="text" value={form.location} onChange={e => set('location', e.target.value)} className={inputCls} placeholder="City" />
-        </F>
-        <F label="Country">
-          <input type="text" value={form.country} onChange={e => set('country', e.target.value)} className={inputCls} />
+        <F label="Location (City)">
+          <select value={form.location} onChange={e => set('location', e.target.value)} className={inputCls}>
+            <option value="">Select city</option>
+            {INDIAN_LOCATIONS.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+          </select>
         </F>
         <F label="Branch / Office">
           <input type="text" value={form.branch} onChange={e => set('branch', e.target.value)} className={inputCls} />

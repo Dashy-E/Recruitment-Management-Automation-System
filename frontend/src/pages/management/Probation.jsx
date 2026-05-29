@@ -1,15 +1,29 @@
 import { useEffect, useState } from 'react';
-import { probationAPI, candidateAPI } from '../../services/api';
+import { probationAPI, candidateAPI, chemistryTestAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Award, CheckCircle, XCircle, Clock, Search, Plus, ChevronRight } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { Award, CheckCircle, XCircle, Clock, Search, Plus, ChevronRight, FlaskConical, ChevronDown } from 'lucide-react';
+import { format, differenceInDays, isValid } from 'date-fns';
 
 const STATUS_COLORS = {
   ONGOING:  'bg-blue-50 text-blue-700',
   PASSED:   'bg-green-50 text-green-700',
   EXTENDED: 'bg-yellow-50 text-yellow-700',
   FAILED:   'bg-red-50 text-red-600',
+};
+
+const CHEM_STATUS_COLORS = {
+  PENDING:   'bg-gray-100 text-gray-600',
+  SCHEDULED: 'bg-blue-100 text-blue-700',
+  COMPLETED: 'bg-indigo-100 text-indigo-700',
+  PASSED:    'bg-green-100 text-green-700',
+  FAILED:    'bg-red-100 text-red-600',
+};
+
+const safeFormat = (val, fmt) => {
+  if (!val) return '—';
+  const d = new Date(val);
+  return isValid(d) ? format(d, fmt) : '—';
 };
 
 const daysLeft = (record) => {
@@ -23,6 +37,111 @@ const ApprovalDot = ({ value, label }) => (
     <span className="text-xs text-gray-500">{label}</span>
   </div>
 );
+
+const ChemistryTestSection = ({ candidateId, candidateName }) => {
+  const [tests, setTests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ testDate: '', remarks: '', notes: '' });
+  const [saving, setSaving] = useState(false);
+
+  const fetchTests = async () => {
+    setLoading(true);
+    try {
+      const res = await chemistryTestAPI.getAll({ candidateId });
+      setTests(res.data.tests || []);
+    } catch { /* silent */ }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchTests(); }, [candidateId]);
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await chemistryTestAPI.create({ candidateId, ...form });
+      toast.success('Chemistry test assigned');
+      setShowForm(false);
+      setForm({ testDate: '', remarks: '', notes: '' });
+      fetchTests();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setSaving(false); }
+  };
+
+  const handleStatusUpdate = async (testId, status) => {
+    try {
+      await chemistryTestAPI.update(testId, { status });
+      toast.success('Status updated');
+      fetchTests();
+    } catch { toast.error('Failed to update status'); }
+  };
+
+  const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-gray-500 flex items-center gap-1.5">
+          <FlaskConical size={13} /> Chemistry Tests
+        </p>
+        <button onClick={() => setShowForm(v => !v)}
+          className="flex items-center gap-1 text-xs bg-orange-50 text-orange-700 px-2.5 py-1.5 rounded-lg hover:bg-orange-100">
+          <Plus size={12} /> Assign Test
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-3 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Test Date</label>
+              <input type="date" className={inputCls} value={form.testDate} onChange={e => setForm(p => ({ ...p, testDate: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Remarks</label>
+              <input type="text" className={inputCls} value={form.remarks} placeholder="e.g. Lab test at site" onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))} />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
+            <textarea rows={2} className={inputCls} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving} className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700 disabled:opacity-50">
+              {saving ? 'Saving…' : 'Assign'}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} className="px-3 py-1.5 border border-gray-200 text-gray-600 text-xs rounded-lg hover:bg-gray-50">Cancel</button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <p className="text-xs text-gray-400">Loading…</p>
+      ) : tests.length === 0 ? (
+        <p className="text-xs text-gray-400 italic">No chemistry tests assigned yet</p>
+      ) : (
+        <div className="space-y-2">
+          {tests.map(t => (
+            <div key={t.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+              <div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CHEM_STATUS_COLORS[t.status] || 'bg-gray-100 text-gray-600'}`}>{t.status}</span>
+                {t.testDate && <span className="text-xs text-gray-500 ml-2">{safeFormat(t.testDate, 'dd MMM yyyy')}</span>}
+                {t.remarks && <span className="text-xs text-gray-400 ml-2">— {t.remarks}</span>}
+              </div>
+              <select
+                value={t.status}
+                onChange={e => handleStatusUpdate(t.id, e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400">
+                {['PENDING', 'SCHEDULED', 'COMPLETED', 'PASSED', 'FAILED'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Probation = () => {
   const { user } = useAuth();
@@ -40,7 +159,7 @@ const Probation = () => {
   const [createForm, setCreateForm] = useState({ candidateId: '', startDate: '', endDate: '', reviewDate: '', remarks: '' });
   const [extendForm, setExtendForm] = useState({ extendedEndDate: '', extensionReason: '' });
 
-  const fetch = async (s = search, st = statusFilter) => {
+  const fetchRecords = async (s = search, st = statusFilter) => {
     setLoading(true);
     try {
       const params = { limit: 20 };
@@ -54,10 +173,8 @@ const Probation = () => {
   };
 
   useEffect(() => {
-    fetch();
-    candidateAPI.getAll({ limit: 200, status: 'TRAINING_COMPLETED' })
-      .then(r => setCandidates(r.data.candidates || []))
-      .catch(() => candidateAPI.getAll({ limit: 200 }).then(r => setCandidates(r.data.candidates || [])));
+    fetchRecords();
+    candidateAPI.getAll({ limit: 200 }).then(r => setCandidates(r.data.data || [])).catch(() => {});
   }, []);
 
   const handleApprove = async (id) => {
@@ -65,7 +182,7 @@ const Probation = () => {
     try {
       await probationAPI.approve(id);
       toast.success('Approved');
-      fetch();
+      fetchRecords();
       if (selected?.id === id) setSelected(null);
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setActing(false); }
@@ -77,7 +194,7 @@ const Probation = () => {
     try {
       await probationAPI.fail(id, { remarks: 'Failed probation review' });
       toast.success('Marked as failed');
-      fetch();
+      fetchRecords();
       setSelected(null);
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setActing(false); }
@@ -91,20 +208,23 @@ const Probation = () => {
       toast.success('Probation extended');
       setShowExtend(null);
       setExtendForm({ extendedEndDate: '', extensionReason: '' });
-      fetch();
+      fetchRecords();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setActing(false); }
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!createForm.candidateId || !createForm.startDate || !createForm.endDate) {
+      return toast.error('Candidate, start date and end date are required');
+    }
     setActing(true);
     try {
       await probationAPI.create(createForm);
       toast.success('Probation record created');
       setShowCreate(false);
       setCreateForm({ candidateId: '', startDate: '', endDate: '', reviewDate: '', remarks: '' });
-      fetch();
+      fetchRecords();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setActing(false); }
   };
@@ -126,22 +246,20 @@ const Probation = () => {
         )}
       </div>
 
-      {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className="w-full border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
             placeholder="Search candidate…" value={search}
-            onChange={e => { setSearch(e.target.value); fetch(e.target.value, statusFilter); }} />
+            onChange={e => { setSearch(e.target.value); fetchRecords(e.target.value, statusFilter); }} />
         </div>
         <select className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-          value={statusFilter} onChange={e => { setStatusFilter(e.target.value); fetch(search, e.target.value); }}>
+          value={statusFilter} onChange={e => { setStatusFilter(e.target.value); fetchRecords(search, e.target.value); }}>
           <option value="">All Statuses</option>
           {['ONGOING', 'PASSED', 'EXTENDED', 'FAILED'].map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -176,7 +294,7 @@ const Probation = () => {
                     <p className="text-xs text-gray-400">{rec.candidate.candidateId} · {rec.candidate.designation}</p>
                   </td>
                   <td className="px-5 py-3.5 text-xs text-gray-500">
-                    {format(new Date(rec.startDate), 'dd MMM yy')} → {format(new Date(endDate), 'dd MMM yy')}
+                    {safeFormat(rec.startDate, 'dd MMM yy')} → {safeFormat(endDate, 'dd MMM yy')}
                     {rec.extendedEndDate && <span className="ml-1 text-yellow-600">(extended)</span>}
                   </td>
                   <td className="px-5 py-3.5">
@@ -218,7 +336,7 @@ const Probation = () => {
                           <XCircle size={12} /> Fail
                         </button>
                       )}
-                      <button onClick={() => setSelected(rec)}
+                      <button onClick={() => setSelected(selected?.id === rec.id ? null : rec)}
                         className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
                         <ChevronRight size={14} />
                       </button>
@@ -231,19 +349,19 @@ const Probation = () => {
         </table>
       </div>
 
-      {/* Detail panel */}
+      {/* Expandable detail panel with chemistry test section */}
       {selected && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg">
-            <div className="px-5 py-4 border-b flex items-center justify-between">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b flex items-center justify-between sticky top-0 bg-white">
               <h3 className="font-semibold text-gray-900">Probation Details</h3>
               <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
             </div>
             <div className="p-5 space-y-3 text-sm">
               <div className="flex justify-between"><span className="text-gray-500">Candidate</span><span className="font-medium">{selected.candidate?.firstName} {selected.candidate?.lastName}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">Start</span><span>{format(new Date(selected.startDate), 'dd MMM yyyy')}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">End</span><span>{format(new Date(selected.extendedEndDate || selected.endDate), 'dd MMM yyyy')}</span></div>
-              {selected.reviewDate && <div className="flex justify-between"><span className="text-gray-500">Review Date</span><span>{format(new Date(selected.reviewDate), 'dd MMM yyyy')}</span></div>}
+              <div className="flex justify-between"><span className="text-gray-500">Start</span><span>{safeFormat(selected.startDate, 'dd MMM yyyy')}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">End</span><span>{safeFormat(selected.extendedEndDate || selected.endDate, 'dd MMM yyyy')}</span></div>
+              {selected.reviewDate && <div className="flex justify-between"><span className="text-gray-500">Review Date</span><span>{safeFormat(selected.reviewDate, 'dd MMM yyyy')}</span></div>}
               <div className="flex justify-between"><span className="text-gray-500">Status</span>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[selected.status]}`}>{selected.status}</span>
               </div>
@@ -255,6 +373,12 @@ const Probation = () => {
                 <ApprovalDot value={selected.countryManagerApproval} label={selected.countryManagerApproval || 'Country Manager — pending'} />
                 <ApprovalDot value={selected.mdApproval} label={selected.mdApproval || 'MD — pending'} />
               </div>
+
+              {/* Chemistry Test Section */}
+              <ChemistryTestSection
+                candidateId={selected.candidate?.id}
+                candidateName={`${selected.candidate?.firstName} ${selected.candidate?.lastName}`}
+              />
             </div>
           </div>
         </div>
@@ -306,7 +430,9 @@ const Probation = () => {
       {showExtend && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-            <div className="px-5 py-4 border-b"><h3 className="font-semibold text-gray-900">Extend Probation — {showExtend.candidate?.firstName} {showExtend.candidate?.lastName}</h3></div>
+            <div className="px-5 py-4 border-b">
+              <h3 className="font-semibold text-gray-900">Extend Probation — {showExtend.candidate?.firstName} {showExtend.candidate?.lastName}</h3>
+            </div>
             <form onSubmit={handleExtend} className="p-5 space-y-4">
               <div>
                 <label className="text-xs font-medium text-gray-600 mb-1 block">New End Date *</label>

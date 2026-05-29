@@ -15,7 +15,7 @@ const Departments = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [d, u] = await Promise.all([departmentAPI.getAll(), userAPI.getAll()]);
+      const [d, u] = await Promise.all([departmentAPI.getAll({ includeInactive: true }), userAPI.getAll()]);
       setDepartments(d.data);
       setUsers(u.data);
     } catch {

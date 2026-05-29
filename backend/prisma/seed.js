@@ -172,8 +172,6 @@ async function main() {
 
   // ─── Agencies ────────────────────────────────────────────────────────────────
   console.log('  Seeding agencies...');
-  const agencyUser = await prisma.user.findUnique({ where: { email: 'agency@recruitment.com' } });
-
   const agenciesData = [
     {
       agencyCode: 'AGY-TLN-00001',
@@ -254,14 +252,6 @@ async function main() {
       isPrimary: true,
     },
   });
-
-  // Link agency partner user to agency
-  const existingPartner = await prisma.agencyPartner.findUnique({ where: { userId: agencyUser.id } });
-  if (!existingPartner) {
-    await prisma.agencyPartner.create({
-      data: { userId: agencyUser.id, agencyId: agencies['TalentLink Staffing'].id },
-    });
-  }
 
   // Assign agencies to locations
   const agencyLocationPairs = [

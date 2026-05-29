@@ -119,18 +119,16 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Suggest agencies for an MRF based on location + workerType
+// Suggest agencies for an MRF based on geographic proximity
 router.get('/:id/suggested-agencies', async (req, res) => {
   try {
     const mrf = await prisma.mRF.findUnique({ where: { id: req.params.id } });
     if (!mrf) return res.status(404).json({ message: 'MRF not found' });
 
-    const agencyType = (mrf.workerType === 'PERMANENT') ? 'HIRING' : 'MANPOWER';
     const locationStr = [mrf.location, mrf.branch].filter(Boolean).join(' ').toLowerCase();
 
-    // Find all active agencies of the right type
     const agencies = await prisma.agency.findMany({
-      where: { agencyType, status: 'ACTIVE', deletedAt: null },
+      where: { status: 'ACTIVE', deletedAt: null },
       include: {
         contacts: { where: { isPrimary: true }, take: 1 },
         locations: { include: { location: true } },
@@ -149,7 +147,6 @@ router.get('/:id/suggested-agencies', async (req, res) => {
       return { ...a, locationScore: score };
     });
 
-    // Sort: geo-matched first, then by tier (PREMIUM > PREFERRED > STANDARD), then by successRate
     const tierOrder = { PREMIUM: 3, PREFERRED: 2, STANDARD: 1 };
     scored.sort((a, b) => {
       if (b.locationScore !== a.locationScore) return b.locationScore - a.locationScore;
@@ -159,7 +156,7 @@ router.get('/:id/suggested-agencies', async (req, res) => {
       return bRate - aRate;
     });
 
-    res.json({ agencies: scored, agencyType, mrf: { id: mrf.id, designation: mrf.designation, location: mrf.location, workerType: mrf.workerType } });
+    res.json({ agencies: scored, mrf: { id: mrf.id, designation: mrf.designation, location: mrf.location } });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Failed to fetch suggested agencies' });

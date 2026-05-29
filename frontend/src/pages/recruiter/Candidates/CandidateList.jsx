@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Eye, Trash2, ChevronLeft, ChevronRight, Upload, Filter } from 'lucide-react';
+import { Plus, Search, Eye, Trash2, ChevronLeft, ChevronRight, Upload, Download, AlertCircle } from 'lucide-react';
 import { candidateAPI, mrfAPI } from '../../../services/api';
 import StatusBadge from '../../../components/common/StatusBadge';
 import Modal from '../../../components/common/Modal';
@@ -21,6 +21,7 @@ const CandidateList = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
   const mrfId = searchParams.get('mrfId');
 
   const fetchCandidates = async () => {
@@ -52,17 +53,30 @@ const CandidateList = () => {
     if (!file) return;
     e.target.value = '';
     setImporting(true);
+    setImportResult(null);
     try {
       const form = new FormData();
       form.append('file', file);
       const res = await candidateAPI.importCSV(form);
       const { created, skipped, errors } = res.data;
-      toast.success(`Imported ${created} candidate${created !== 1 ? 's' : ''}${skipped ? `, skipped ${skipped} duplicates` : ''}`);
-      if (errors?.length) console.warn('Import errors:', errors);
+      setImportResult({ created, skipped, errors: errors || [] });
+      if (created > 0) toast.success(`Imported ${created} candidate${created !== 1 ? 's' : ''}${skipped ? `, skipped ${skipped}` : ''}`);
+      else toast.error('No candidates imported — check errors below');
       fetchCandidates();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Import failed');
     } finally { setImporting(false); }
+  };
+
+  const handleDownloadTemplate = () => {
+    const headers = 'firstname,lastname,email,phone,designation,experience,currentcompany,city,source';
+    const sample = 'John,Doe,john.doe@example.com,9876543210,Software Engineer,24,Acme Corp,Mumbai,DIRECT';
+    const csv = `${headers}\n${sample}`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'candidate_import_template.csv'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -73,6 +87,9 @@ const CandidateList = () => {
           <p className="text-sm text-gray-500">{total} total candidates</p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleDownloadTemplate} className="flex items-center gap-2 border border-gray-200 text-gray-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium" title="Download CSV template">
+            <Download size={15} /> Template
+          </button>
           <label className={`flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
             <Upload size={15} />
             {importing ? 'Importing…' : 'Import CSV'}
@@ -83,6 +100,27 @@ const CandidateList = () => {
           </button>
         </div>
       </div>
+
+      {importResult && (
+        <div className={`rounded-xl border p-4 text-sm ${importResult.errors.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-medium text-gray-800">
+              Import complete — {importResult.created} created, {importResult.skipped} skipped{importResult.errors.length > 0 ? `, ${importResult.errors.length} error${importResult.errors.length !== 1 ? 's' : ''}` : ''}
+            </span>
+            <button onClick={() => setImportResult(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+          </div>
+          {importResult.errors.length > 0 && (
+            <div className="mt-2 space-y-1 max-h-36 overflow-y-auto">
+              {importResult.errors.map((e, i) => (
+                <div key={i} className="flex items-start gap-2 text-xs text-red-700">
+                  <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
+                  <span>Row {e.row}: {e.reason}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3 flex-wrap">
         <div className="relative flex-1 min-w-48">

@@ -15,8 +15,11 @@ const UserForm = ({ user, departments, onSuccess }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (user) await userAPI.update(user.id, form);
-      else await userAPI.create(form);
+      if (user) {
+        const payload = { email: form.email, firstName: form.firstName, lastName: form.lastName, role: form.role, departmentId: form.departmentId || null };
+        if (form.password) payload.password = form.password;
+        await userAPI.update(user.id, payload);
+      } else await userAPI.create(form);
       toast.success(user ? 'User updated' : 'User created');
       onSuccess();
     } catch (err) {

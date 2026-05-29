@@ -134,7 +134,7 @@ export const notificationAPI = {
 
 // Departments
 export const departmentAPI = {
-  getAll: () => api.get('/departments'),
+  getAll: (params) => api.get('/departments', { params }),
   create: (data) => api.post('/departments', data),
   update: (id, data) => api.put(`/departments/${id}`, data),
 };
@@ -142,7 +142,6 @@ export const departmentAPI = {
 // Agencies
 export const agencyAPI = {
   getAll: (params) => api.get('/agencies', { params }),
-  getMy: () => api.get('/agencies/my'),
   getById: (id) => api.get(`/agencies/${id}`),
   create: (data) => api.post('/agencies', data),
   update: (id, data) => api.put(`/agencies/${id}`, data),
@@ -192,15 +191,6 @@ export const pipelineAPI = {
   removeEntry: (candidateId, stageId) => api.delete(`/pipeline/entry/${candidateId}/${stageId}`),
 };
 
-// Casual Workers
-export const casualWorkerAPI = {
-  getAll: (params) => api.get('/casual-workers', { params }),
-  getById: (id) => api.get(`/casual-workers/${id}`),
-  create: (data) => api.post('/casual-workers', data),
-  update: (id, data) => api.put(`/casual-workers/${id}`, data),
-  verify: (id, data) => api.patch(`/casual-workers/${id}/verify`, data),
-};
-
 // Incoming Mail
 export const incomingMailAPI = {
   getAll: (params) => api.get('/incoming-mail', { params }),
@@ -236,6 +226,15 @@ export const sourcingAPI = {
   create: (data) => api.post('/sourcing', data),
   update: (id, data) => api.put(`/sourcing/${id}`, data),
   delete: (id) => api.delete(`/sourcing/${id}`),
+};
+
+// Chemistry Tests
+export const chemistryTestAPI = {
+  getAll: (params) => api.get('/chemistry-tests', { params }),
+  getById: (id) => api.get(`/chemistry-tests/${id}`),
+  create: (data) => api.post('/chemistry-tests', data),
+  update: (id, data) => api.put(`/chemistry-tests/${id}`, data),
+  delete: (id) => api.delete(`/chemistry-tests/${id}`),
 };
 
 export default api;

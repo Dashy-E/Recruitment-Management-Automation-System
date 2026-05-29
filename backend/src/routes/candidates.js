@@ -190,15 +190,36 @@ router.delete('/:id', async (req, res) => {
 // Bulk CSV import
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+// Parse a single CSV line handling quoted fields (commas inside quotes, escaped quotes)
+function parseCSVLine(line) {
+  const fields = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } // escaped quote
+      else inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
+
 router.post('/import/csv', csvUpload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-    const text = req.file.buffer.toString('utf-8');
+    const text = req.file.buffer.toString('utf-8').replace(/^﻿/, ''); // strip BOM
     const lines = text.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return res.status(400).json({ message: 'CSV must have a header row and at least one data row' });
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, ''));
 
     const required = ['firstname', 'lastname', 'email', 'phone', 'designation'];
     const missing = required.filter(r => !headers.includes(r));
@@ -207,18 +228,34 @@ router.post('/import/csv', csvUpload.single('file'), async (req, res) => {
     const results = { created: 0, skipped: 0, errors: [] };
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-      const row = {};
-      headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+      if (!lines[i].trim()) continue;
+      let values;
+      try { values = parseCSVLine(lines[i]); } catch {
+        results.errors.push({ row: i + 1, reason: 'Malformed CSV row' });
+        continue;
+      }
 
-      if (!row.email || !row.phone || !row.firstname || !row.designation) {
-        results.errors.push({ row: i + 1, reason: 'Missing required field' });
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = (values[idx] || '').trim(); });
+
+      const missingFields = [];
+      if (!row.firstname) missingFields.push('firstname');
+      if (!row.email) missingFields.push('email');
+      if (!row.phone) missingFields.push('phone');
+      if (!row.designation) missingFields.push('designation');
+      if (missingFields.length) {
+        results.errors.push({ row: i + 1, reason: `Missing: ${missingFields.join(', ')}` });
+        continue;
+      }
+
+      if (!/^[\w.+-]+@[\w-]+\.[a-z]{2,}$/i.test(row.email)) {
+        results.errors.push({ row: i + 1, reason: `Invalid email: ${row.email}` });
         continue;
       }
 
       try {
         const existing = await prisma.candidate.findFirst({
-          where: { OR: [{ email: row.email }, { phone: row.phone }], deletedAt: null },
+          where: { OR: [{ email: row.email.toLowerCase() }, { phone: row.phone }], deletedAt: null },
         });
         if (existing) { results.skipped++; continue; }
 
@@ -227,25 +264,30 @@ router.post('/import/csv', csvUpload.single('file'), async (req, res) => {
           data: {
             candidateId,
             firstName: row.firstname,
-            lastName: row.lastname,
+            lastName: row.lastname || '',
             email: row.email.toLowerCase(),
             phone: row.phone,
             designation: row.designation,
             experience: parseInt(row.experience) || 0,
             currentCompany: row.currentcompany || null,
             city: row.city || null,
-            source: (row.source || 'DIRECT').toUpperCase(),
+            source: (['DIRECT', 'AGENCY', 'REFERRAL', 'PORTAL', 'WALK_IN'].includes((row.source || '').toUpperCase())
+              ? row.source.toUpperCase() : 'DIRECT'),
             addedById: req.user.id,
+            skills: '[]',
+            education: '[]',
+            certifications: '[]',
           },
         });
         results.created++;
-      } catch {
-        results.errors.push({ row: i + 1, reason: 'Database error (possible duplicate)' });
+      } catch (dbErr) {
+        results.errors.push({ row: i + 1, reason: 'Database error — possible duplicate key' });
       }
     }
 
     res.json(results);
   } catch (e) {
+    console.error(e);
     res.status(500).json({ message: 'Failed to import CSV' });
   }
 });

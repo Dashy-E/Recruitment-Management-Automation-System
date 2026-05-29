@@ -35,11 +35,8 @@ const pageTitles = {
   '/recruiter/ai-screening': 'AI Screening',
   '/recruiter/agencies': 'Agency Management',
   '/recruiter/email-center': 'Email Center',
-  '/recruiter/casual-workers': 'Casual Workers',
   '/recruiter/geography': 'Geographic Intelligence',
   '/recruiter/incoming-mail': 'Incoming Mail',
-  '/recruiter/sourcing': 'Platform Sourcing',
-  '/agency': 'Agency Partner Portal',
 };
 
 const Layout = () => {

@@ -77,7 +77,13 @@ router.post('/', authorize('ADMIN', 'HR'), async (req, res) => {
 
 router.put('/:id', authorize('ADMIN', 'HR'), async (req, res) => {
   try {
-    const { password, ...data } = req.body;
+    const { email, firstName, lastName, role, departmentId, password } = req.body;
+    const data = {};
+    if (email) data.email = email.toLowerCase();
+    if (firstName) data.firstName = firstName;
+    if (lastName) data.lastName = lastName;
+    if (role) data.role = role;
+    if (departmentId !== undefined) data.departmentId = departmentId || null;
     if (password) data.password = await bcrypt.hash(password, 10);
     const user = await prisma.user.update({
       where: { id: req.params.id },
@@ -86,7 +92,8 @@ router.put('/:id', authorize('ADMIN', 'HR'), async (req, res) => {
     });
     res.json(user);
   } catch (e) {
-    res.status(500).json({ message: 'Failed to update user' });
+    console.error('Update user error:', e);
+    res.status(500).json({ message: e.message || 'Failed to update user' });
   }
 });
 

@@ -8,44 +8,86 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
 const InterviewForm = ({ candidateId, onSuccess }) => {
-  const [users, setUsers] = useState([]);
   const [form, setForm] = useState({ candidateId, round: 1, interviewType: 'TECHNICAL', scheduledAt: '', duration: 60, mode: 'ONLINE', meetingLink: '', notes: '' });
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => { userAPI.getInterviewers().then(r => setUsers(r.data)).catch(() => {}); }, []);
+  const validate = () => {
+    const e = {};
+    if (!form.scheduledAt) e.scheduledAt = 'Date & time is required';
+    else if (new Date(form.scheduledAt) <= new Date()) e.scheduledAt = 'Must be a future date & time';
+    if (form.mode === 'ONLINE' && !form.meetingLink.trim()) e.meetingLink = 'Meeting link is required for online interviews';
+    return e;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
+    setSubmitting(true);
     try {
       await interviewAPI.create(form);
-      toast.success('Interview scheduled');
+      toast.success('Interview scheduled — confirmation email sent to candidate');
       onSuccess();
-    } catch { toast.error('Failed to schedule interview'); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to schedule interview');
+    } finally { setSubmitting(false); }
   };
 
-  const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
+  const inputCls = (field) => `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors[field] ? 'border-red-400 bg-red-50' : 'border-gray-200'}`;
+
+  // Build minimum datetime string for datetime-local (now + 5 min)
+  const minDateTime = new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div><label className="text-xs font-medium text-gray-600 mb-1 block">Round</label>
-          <input type="number" min="1" max="10" value={form.round} onChange={e => setForm(p => ({ ...p, round: parseInt(e.target.value) }))} className={inputCls} /></div>
-        <div><label className="text-xs font-medium text-gray-600 mb-1 block">Type</label>
-          <select value={form.interviewType} onChange={e => setForm(p => ({ ...p, interviewType: e.target.value }))} className={inputCls}>
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Round</label>
+          <input type="number" min="1" max="10" value={form.round} onChange={e => setForm(p => ({ ...p, round: parseInt(e.target.value) }))} className={inputCls()} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Type *</label>
+          <select value={form.interviewType} onChange={e => setForm(p => ({ ...p, interviewType: e.target.value }))} className={inputCls()}>
             {['TECHNICAL', 'HR', 'PANEL', 'FINAL', 'APTITUDE'].map(t => <option key={t}>{t}</option>)}
-          </select></div>
-        <div><label className="text-xs font-medium text-gray-600 mb-1 block">Date & Time *</label>
-          <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm(p => ({ ...p, scheduledAt: e.target.value }))} className={inputCls} required /></div>
-        <div><label className="text-xs font-medium text-gray-600 mb-1 block">Duration (min)</label>
-          <input type="number" value={form.duration} onChange={e => setForm(p => ({ ...p, duration: parseInt(e.target.value) }))} className={inputCls} /></div>
-        <div><label className="text-xs font-medium text-gray-600 mb-1 block">Mode</label>
-          <select value={form.mode} onChange={e => setForm(p => ({ ...p, mode: e.target.value }))} className={inputCls}>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Date & Time *</label>
+          <input type="datetime-local" min={minDateTime} value={form.scheduledAt}
+            onChange={e => { setForm(p => ({ ...p, scheduledAt: e.target.value })); setErrors(p => ({ ...p, scheduledAt: '' })); }}
+            className={inputCls('scheduledAt')} required />
+          {errors.scheduledAt && <p className="text-xs text-red-500 mt-1">{errors.scheduledAt}</p>}
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Duration (min)</label>
+          <input type="number" min="15" max="480" value={form.duration} onChange={e => setForm(p => ({ ...p, duration: parseInt(e.target.value) }))} className={inputCls()} />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">Mode *</label>
+          <select value={form.mode} onChange={e => setForm(p => ({ ...p, mode: e.target.value }))} className={inputCls()}>
             {['ONLINE', 'IN_PERSON', 'PHONE'].map(m => <option key={m}>{m}</option>)}
-          </select></div>
-        <div><label className="text-xs font-medium text-gray-600 mb-1 block">Meeting Link</label>
-          <input type="text" value={form.meetingLink} onChange={e => setForm(p => ({ ...p, meetingLink: e.target.value }))} className={inputCls} placeholder="https://..." /></div>
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1 block">
+            Meeting Link {form.mode === 'ONLINE' && <span className="text-red-500">*</span>}
+          </label>
+          <input type="url" value={form.meetingLink}
+            onChange={e => { setForm(p => ({ ...p, meetingLink: e.target.value })); setErrors(p => ({ ...p, meetingLink: '' })); }}
+            className={inputCls('meetingLink')} placeholder="https://meet.google.com/..." />
+          {errors.meetingLink && <p className="text-xs text-red-500 mt-1">{errors.meetingLink}</p>}
+        </div>
       </div>
-      <div><label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
-        <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className={inputCls} rows={3} /></div>
-      <button type="submit" className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">Schedule Interview</button>
+      <div>
+        <label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
+        <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} className={inputCls()} rows={3} placeholder="Any special instructions for the interviewer or candidate…" />
+      </div>
+      <p className="text-xs text-gray-400">A confirmation email will be sent to the candidate automatically.</p>
+      <button type="submit" disabled={submitting} className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-60">
+        {submitting ? 'Scheduling…' : 'Schedule Interview'}
+      </button>
     </form>
   );
 };
