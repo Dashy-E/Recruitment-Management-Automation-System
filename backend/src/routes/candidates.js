@@ -82,19 +82,28 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', upload.single('resume'), async (req, res) => {
+router.post('/', async (req, res) => {
   try {
+    const { firstName, lastName, email, phone, designation, skills, experience, ...rest } = req.body;
+    if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !designation?.trim()) {
+      return res.status(400).json({ message: 'firstName, lastName, email, phone, and designation are required' });
+    }
+
     const candidateId = await generateCandidateId();
     const data = {
-      ...req.body,
+      ...rest,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.toLowerCase().trim(),
+      phone: phone.trim(),
+      designation: designation.trim(),
       candidateId,
       addedById: req.user.id,
-      experience: parseInt(req.body.experience) || 0,
-      skills: JSON.stringify(Array.isArray(req.body.skills) ? req.body.skills : (req.body.skills ? req.body.skills.split(',').map(s => s.trim()) : [])),
+      experience: parseInt(experience) || 0,
+      skills: JSON.stringify(Array.isArray(skills) ? skills : (skills ? skills.split(',').map(s => s.trim()) : [])),
       education: JSON.stringify([]),
       certifications: JSON.stringify([]),
     };
-    if (req.file) data.resumePath = req.file.path;
 
     const existing = await prisma.candidate.findFirst({
       where: { OR: [{ email: data.email }, { phone: data.phone }] },

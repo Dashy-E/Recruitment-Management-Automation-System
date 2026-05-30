@@ -36,12 +36,14 @@ model User {
   outreachSent           MrfOutreach[]
   jobPostings            JobPosting[]
   chemistryTestsAssigned ChemistryTest[]     @relation("ChemistryTestAssigner")
+  employeeDocuments      EmployeeDocument[]
 }
 
 model Department {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
+  category    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -649,6 +651,22 @@ model IncomingMail {
   agency      Agency?      @relation("AgencyIncomingMails", fields: [agencyId], references: [id])
   mrf         MRF?         @relation("MRFIncomingMails", fields: [mrfId], references: [id])
   outreach    MrfOutreach? @relation(fields: [outreachId], references: [id])
+}
+
+// ─── Employee Documents ───────────────────────────────────────────────────────
+
+model EmployeeDocument {
+  id               String    @id @default(cuid())
+  userId           String
+  docType          String
+  docNumber        String
+  issuingAuthority String
+  issueDate        DateTime
+  expiryDate       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 // ─── Chemistry Test Tracking ─────────────────────────────────────────────────

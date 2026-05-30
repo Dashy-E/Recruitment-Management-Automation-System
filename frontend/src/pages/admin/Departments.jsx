@@ -9,7 +9,9 @@ const Departments = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editDept, setEditDept] = useState(null);
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({ name: '', description: '', category: '' });
+
+  const CATEGORIES = ['Engineering', 'Sales', 'Operations', 'HR', 'Finance', 'Marketing', 'Support', 'Legal', 'Other'];
   const [saving, setSaving] = useState(false);
 
   const fetchData = async () => {
@@ -27,8 +29,8 @@ const Departments = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  const openCreate = () => { setEditDept(null); setForm({ name: '', description: '' }); setShowForm(true); };
-  const openEdit = (dept) => { setEditDept(dept); setForm({ name: dept.name, description: dept.description || '' }); setShowForm(true); };
+  const openCreate = () => { setEditDept(null); setForm({ name: '', description: '', category: '' }); setShowForm(true); };
+  const openEdit = (dept) => { setEditDept(dept); setForm({ name: dept.name, description: dept.description || '', category: dept.category || '' }); setShowForm(true); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -105,9 +107,14 @@ const Departments = () => {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-800 text-sm">{dept.name}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${dept.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {dept.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${dept.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {dept.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        {dept.category && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">{dept.category}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
@@ -164,6 +171,17 @@ const Departments = () => {
                   placeholder="e.g. Engineering, Sales, HR"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                <select
+                  className={inputCls}
+                  value={form.category}
+                  onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                >
+                  <option value="">Select category</option>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>

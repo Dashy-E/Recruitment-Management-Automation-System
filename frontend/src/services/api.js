@@ -48,14 +48,12 @@ export const mrfAPI = {
 export const candidateAPI = {
   getAll: (params) => api.get('/candidates', { params }),
   getById: (id) => api.get(`/candidates/${id}`),
-  create: (data) => api.post('/candidates', data, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  create: (data) => api.post('/candidates', data),
   update: (id, data) => api.put(`/candidates/${id}`, data),
   updateStatus: (id, status) => api.patch(`/candidates/${id}/status`, { status }),
-  uploadDocument: (id, data) => api.post(`/candidates/${id}/documents`, data, { headers: { 'Content-Type': 'multipart/form-data' } }),
   addComment: (id, comment) => api.post(`/candidates/${id}/comments`, { comment }),
   editComment: (id, commentId, comment) => api.put(`/candidates/${id}/comments/${commentId}`, { comment }),
   delete: (id) => api.delete(`/candidates/${id}`),
-  importCSV: (formData) => api.post('/candidates/import/csv', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 };
 
 // Interviews
@@ -143,6 +141,7 @@ export const departmentAPI = {
 export const agencyAPI = {
   getAll: (params) => api.get('/agencies', { params }),
   getById: (id) => api.get(`/agencies/${id}`),
+  getMy: () => api.get('/agencies/my'),
   create: (data) => api.post('/agencies', data),
   update: (id, data) => api.put(`/agencies/${id}`, data),
   delete: (id) => api.delete(`/agencies/${id}`),
@@ -218,15 +217,6 @@ export const auditLogAPI = {
   getEntities: () => api.get('/audit-logs/entities'),
 };
 
-// Sourcing (Job Postings + Platform Tracking)
-export const sourcingAPI = {
-  getAll: (params) => api.get('/sourcing', { params }),
-  getByMrf: (mrfId) => api.get(`/sourcing/mrf/${mrfId}`),
-  generateDescription: (mrfId, platform) => api.post('/sourcing/generate-description', { mrfId, platform }),
-  create: (data) => api.post('/sourcing', data),
-  update: (id, data) => api.put(`/sourcing/${id}`, data),
-  delete: (id) => api.delete(`/sourcing/${id}`),
-};
 
 // Chemistry Tests
 export const chemistryTestAPI = {
@@ -235,6 +225,13 @@ export const chemistryTestAPI = {
   create: (data) => api.post('/chemistry-tests', data),
   update: (id, data) => api.put(`/chemistry-tests/${id}`, data),
   delete: (id) => api.delete(`/chemistry-tests/${id}`),
+};
+
+// Employee Documents
+export const employeeDocumentAPI = {
+  getAll: () => api.get('/employee-documents'),
+  create: (data) => api.post('/employee-documents', data),
+  delete: (id) => api.delete(`/employee-documents/${id}`),
 };
 
 export default api;

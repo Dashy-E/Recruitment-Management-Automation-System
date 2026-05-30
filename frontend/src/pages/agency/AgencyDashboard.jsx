@@ -36,19 +36,17 @@ export default function AgencyDashboard() {
     e.preventDefault();
     if (!agency) return;
     try {
-      // First create candidate
-      const count = await candidateAPI.getAll({ limit: 1 });
-      const formData = new FormData();
-      formData.append('firstName', submitForm.candidateName.split(' ')[0]);
-      formData.append('lastName', submitForm.candidateName.split(' ').slice(1).join(' ') || 'N/A');
-      formData.append('email', submitForm.email);
-      formData.append('phone', submitForm.phone);
-      formData.append('designation', 'To be assigned');
-      formData.append('experience', submitForm.experience || '0');
-      formData.append('source', 'AGENCY');
-      formData.append('mrfId', submitForm.mrfId);
-
-      const cRes = await candidateAPI.create(formData);
+      const nameParts = submitForm.candidateName.trim().split(' ');
+      const cRes = await candidateAPI.create({
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(' ') || 'N/A',
+        email: submitForm.email,
+        phone: submitForm.phone,
+        designation: 'To be assigned',
+        experience: parseInt(submitForm.experience) || 0,
+        source: 'Agency',
+        mrfId: submitForm.mrfId || undefined,
+      });
       await agencyAPI.submitCandidate(agency.id, {
         mrfId: submitForm.mrfId,
         candidateId: cRes.data.id,

@@ -3,14 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { mrfAPI } from '../../../services/api';
 import StatusBadge from '../../../components/common/StatusBadge';
 import Modal from '../../../components/common/Modal';
-import { ArrowLeft, MapPin, Users, Calendar, DollarSign, Briefcase, Send, Globe, Mail, ChevronDown, ChevronUp, Check, Building2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Users, Calendar, DollarSign, Briefcase, Send, Mail, ChevronDown, ChevronUp, Check, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
-const TABS = ['Overview', 'Candidates', 'Agency Outreach', 'Job Postings'];
-
-const PLATFORM_LABELS = { LINKEDIN: 'LinkedIn', NAUKRI: 'Naukri', INDEED: 'Indeed', INTERNSHALA: 'Internshala', MONSTER: 'Monster', SHINE: 'Shine', OTHER: 'Other' };
-const PLATFORM_COLORS = { LINKEDIN: 'bg-blue-100 text-blue-700', NAUKRI: 'bg-orange-100 text-orange-700', INDEED: 'bg-indigo-100 text-indigo-700', INTERNSHALA: 'bg-green-100 text-green-700', MONSTER: 'bg-purple-100 text-purple-700', SHINE: 'bg-yellow-100 text-yellow-700', OTHER: 'bg-gray-100 text-gray-600' };
+const TABS = ['Overview', 'Candidates', 'Agency Outreach'];
 
 export default function MRFDetail() {
   const { id } = useParams();
@@ -28,9 +25,6 @@ export default function MRFDetail() {
   const [expandedOutreach, setExpandedOutreach] = useState(null);
   const [loadingAgencies, setLoadingAgencies] = useState(false);
 
-  // Job Postings
-  const [jobPostings, setJobPostings] = useState([]);
-
   const fetchMrf = useCallback(() => {
     mrfAPI.getById(id).then(r => setMrf(r.data)).catch(() => toast.error('Failed to load MRF')).finally(() => setLoading(false));
   }, [id]);
@@ -47,17 +41,9 @@ export default function MRFDetail() {
     finally { setLoadingAgencies(false); }
   }, [id]);
 
-  const loadPostings = useCallback(async () => {
-    try {
-      const res = await sourcingAPI.getByMrf(id);
-      setJobPostings(res.data || []);
-    } catch {}
-  }, [id]);
-
   useEffect(() => {
     if (tab === 'Agency Outreach') loadOutreach();
-    if (tab === 'Job Postings') loadPostings();
-  }, [tab, loadOutreach, loadPostings]);
+  }, [tab, loadOutreach]);
 
   const prefillOutreach = () => {
     if (!mrf) return;
@@ -305,38 +291,6 @@ HR Team`,
                 </div>
               )}
             </>
-          )}
-        </div>
-      )}
-
-      {/* Job Postings tab */}
-      {tab === 'Job Postings' && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <Link to="/recruiter/sourcing" className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800">
-              <Globe size={14} /> Manage all postings →
-            </Link>
-          </div>
-          {jobPostings.length === 0 ? (
-            <div className="bg-white rounded-xl p-10 text-center text-gray-400 border border-gray-100 shadow-sm">
-              <Globe size={32} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No job postings tracked for this MRF</p>
-              <Link to="/recruiter/sourcing" className="mt-2 inline-block text-xs text-indigo-600 hover:text-indigo-800">Go to Sourcing → Track a posting</Link>
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-100 overflow-hidden">
-              {jobPostings.map(p => (
-                <div key={p.id} className="px-5 py-3.5 flex items-center gap-4">
-                  <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${PLATFORM_COLORS[p.platform]}`}>{PLATFORM_LABELS[p.platform] || p.platform}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">{p.title}</p>
-                    <p className="text-xs text-gray-400">Posted {format(new Date(p.postedAt), 'dd MMM yyyy')} · {p.applications} applications</p>
-                  </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${p.status === 'ACTIVE' ? 'bg-green-100 text-green-700' : p.status === 'PAUSED' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>{p.status}</span>
-                  {p.postUrl && <a href={p.postUrl} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-indigo-600"><Globe size={14} /></a>}
-                </div>
-              ))}
-            </div>
           )}
         </div>
       )}

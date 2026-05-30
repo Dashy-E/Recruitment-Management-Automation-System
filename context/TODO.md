@@ -75,6 +75,42 @@
 
 ---
 
+## Completed (Session 6 — Stability & Route Fixes)
+
+[x] **Quick access login redirects** — `quickLogin` no longer calls `navigate()` directly; relies on `if (user)` guard in Login.jsx after AuthContext propagates  
+[x] **Agency Partner removed from login** — removed from `roleRedirects` map and quick access buttons  
+[x] **Casual Workers removed from sidebar** — removed from HR and RECRUITER nav arrays in Sidebar.jsx  
+[x] **Agency Partner portal config removed** — AGENCY_PARTNER block removed from Sidebar.jsx  
+[x] **Admin user edit fixed** — backend `PUT /users/:id` now whitelists only safe scalar fields; frontend sends clean payload (no relation objects, no timestamps)  
+[x] **Deactivated departments stay visible** — admin Departments page passes `{ includeInactive: true }` to `departmentAPI.getAll()`  
+[x] **MRF form input focus loss fixed** — `F` wrapper component moved to module level (was defined inside `MRFForm`, causing React to treat it as a new type on every render → unmount/remount → lost focus)  
+[x] **CTC spinners removed** — salary fields changed from `type="number"` to `type="text" inputMode="numeric"`  
+[x] **Management MRF Overview removed** — was showing same content as dashboard; nav item removed from BRANCH_MANAGER config  
+[x] **Agency routes rewrite** — pagination safety (`parsePagination`), crypto-based agency codes, `findActiveAgency` helper, 404 checks on all detail/mutation routes, 409 on duplicate submissions, required field validation, expanded performance metrics  
+
+---
+
+## Completed (Session 7 — Cleanup, Validation & New Features)
+
+[x] **Agency portal fixed** — added `GET /agencies/my` backend route + `agencyAPI.getMy()` in api.js; `AgencyDashboard` no longer crashes on load  
+[x] **Platform sourcing removed** — `sourcingRoutes` unregistered from server.js; `sourcingAPI` removed from api.js; Job Postings tab removed from MRFDetail; MRFDetail now has 3 tabs (Overview, Candidates, Agency Outreach)  
+[x] **CSV import removed** — Import CSV button, Download Template button, all import state and handlers removed from CandidateList; no file-based data entry  
+[x] **Resume upload removed** — FormData approach in CandidateForm replaced with plain JSON; Resume Upload section removed; `candidateAPI.create` is now a plain JSON POST  
+[x] **Document upload removed** — Upload Doc button and modal removed from CandidateDetail; `candidateAPI.uploadDocument` removed from api.js  
+[x] **Candidate backend** — `POST /candidates` no longer uses `multer`; accepts JSON body; validates required fields at the API level  
+[x] **CandidateForm per-field validation** — F component moved to module level (fixes input focus loss); inline errors for: name (letters only), email (regex), phone (10 digits), DOB (past + age ≥ 16), salary/experience/notice (non-negative); phone inputs strip non-digits automatically  
+[x] **Interview scheduling validation** — confirmed already implemented: `scheduledAt` required + must be future, `meetingLink` required when mode=ONLINE, inline error display  
+[x] **Department category** — added `category String?` field to Prisma schema + pushed to DB; category dropdown (Engineering, Sales, HR, Finance, etc.) in create/edit modal; category badge shown on department card  
+[x] **Chemistry test in probation** — confirmed already fully implemented: `ChemistryTestSection` component with assign form, status update, date/remarks, embedded in probation detail modal  
+[x] **AgencyDashboard submit** — changed to send plain JSON instead of FormData when creating candidate via Submit Candidate form  
+
+## Still Pending
+
+- [ ] **Agencies contacted → save to database** — when HR contacts an agency via outreach, agency communication history should be viewable in the agency detail page  
+- [ ] **Replace training section with offer section** — needs scope clarification from user  
+
+---
+
 ## Infrastructure (Deployment Concerns — Not Code Changes)
 
 - [ ] **SQLite → PostgreSQL** — change `provider = "sqlite"` to `"postgresql"` in schema.prisma and update `DATABASE_URL`
@@ -85,15 +121,4 @@
 
 ---
 
-## Potential Enhancements
 
-- [ ] WebSocket / Server-Sent Events for real-time notifications
-- [ ] PDF generation for offer letters and appointment letters (pdfkit or puppeteer)
-- [ ] Calendar integration for interview scheduling (Google Calendar API)
-- [ ] WhatsApp/SMS channel for Communication engine
-- [ ] Geographic heat-map visualization (Leaflet.js or Google Maps)
-- [ ] Advanced AI screening with embeddings (OpenAI or local model) instead of TF-IDF
-- [ ] Multi-tenancy / company isolation layer
-- [ ] Dark mode toggle
-- [ ] Export to Excel for reports
-- [ ] Input validation library (Zod or Joi) for backend routes

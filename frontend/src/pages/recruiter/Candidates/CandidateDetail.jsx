@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { candidateAPI, interviewAPI, userAPI } from '../../../services/api';
 import StatusBadge from '../../../components/common/StatusBadge';
 import Modal from '../../../components/common/Modal';
-import { ArrowLeft, MessageSquare, Calendar, Upload, Edit2, Send, Trash2, Check, X, FileText } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Calendar, Edit2, Check, X, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -97,11 +97,8 @@ const CandidateDetail = () => {
   const [candidate, setCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showInterviewForm, setShowInterviewForm] = useState(false);
-  const [showDocUpload, setShowDocUpload] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [editCommentId, setEditCommentId] = useState(null);
-  const [docFile, setDocFile] = useState(null);
-  const [docType, setDocType] = useState('RESUME');
   const [activeTab, setActiveTab] = useState('overview');
 
   const fetch = () => {
@@ -118,15 +115,6 @@ const CandidateDetail = () => {
       setCommentText('');
       fetch();
     } catch { toast.error('Failed to save comment'); }
-  };
-
-  const handleDocUpload = async () => {
-    if (!docFile) return toast.error('Select a file');
-    const fd = new FormData();
-    fd.append('document', docFile);
-    fd.append('docType', docType);
-    try { await candidateAPI.uploadDocument(id, fd); toast.success('Document uploaded'); setShowDocUpload(false); setDocFile(null); fetch(); }
-    catch { toast.error('Upload failed'); }
   };
 
   const handleStatusChange = async (status) => {
@@ -168,9 +156,6 @@ const CandidateDetail = () => {
           </select>
           <button onClick={() => setShowInterviewForm(true)} className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700">
             <Calendar size={14} /> Schedule Interview
-          </button>
-          <button onClick={() => setShowDocUpload(true)} className="flex items-center gap-1.5 bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-200">
-            <Upload size={14} /> Upload Doc
           </button>
         </div>
       </div>
@@ -368,21 +353,6 @@ const CandidateDetail = () => {
       {/* Modals */}
       <Modal open={showInterviewForm} onClose={() => setShowInterviewForm(false)} title="Schedule Interview" size="lg">
         <InterviewForm candidateId={id} onSuccess={() => { setShowInterviewForm(false); fetch(); }} />
-      </Modal>
-      <Modal open={showDocUpload} onClose={() => setShowDocUpload(false)} title="Upload Document" size="sm">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Document Type</label>
-            <select value={docType} onChange={e => setDocType(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
-              {['RESUME', 'ID_PROOF', 'CERTIFICATE', 'EDUCATION', 'OFFER_LETTER', 'OTHER'].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">File</label>
-            <input type="file" onChange={e => setDocFile(e.target.files[0])} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-          </div>
-          <button onClick={handleDocUpload} className="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm hover:bg-indigo-700 transition-colors">Upload</button>
-        </div>
       </Modal>
     </div>
   );
