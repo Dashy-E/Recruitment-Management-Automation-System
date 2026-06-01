@@ -38,12 +38,15 @@ const ApprovalDot = ({ value, label }) => (
   </div>
 );
 
-const ChemistryTestSection = ({ candidateId, candidateName }) => {
+const ChemistryTestSection = ({ candidateId }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ testDate: '', remarks: '', notes: '' });
+  const [form, setForm] = useState({ testDate: '', examLink: '', maxScore: '', passingScore: '', remarks: '', notes: '' });
   const [saving, setSaving] = useState(false);
+  const [scoreInputs, setScoreInputs] = useState({}); // testId → score string
+  const [recordingId, setRecordingId] = useState(null);
+  const [copied, setCopied] = useState(null);
 
   const fetchTests = async () => {
     setLoading(true);
@@ -58,23 +61,43 @@ const ChemistryTestSection = ({ candidateId, candidateName }) => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!form.maxScore || isNaN(parseFloat(form.maxScore)) || parseFloat(form.maxScore) <= 0)
+      return toast.error('Max score is required and must be greater than 0');
+    if (!form.passingScore || isNaN(parseFloat(form.passingScore)))
+      return toast.error('Passing score is required');
+    if (parseFloat(form.passingScore) > parseFloat(form.maxScore))
+      return toast.error('Passing score cannot exceed max score');
     setSaving(true);
     try {
       await chemistryTestAPI.create({ candidateId, ...form });
       toast.success('Chemistry test assigned');
       setShowForm(false);
-      setForm({ testDate: '', remarks: '', notes: '' });
+      setForm({ testDate: '', examLink: '', maxScore: '', passingScore: '', remarks: '', notes: '' });
       fetchTests();
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to assign'); }
     finally { setSaving(false); }
   };
 
-  const handleStatusUpdate = async (testId, status) => {
+  const handleRecordScore = async (testId) => {
+    const score = scoreInputs[testId];
+    if (score === undefined || score === '') return toast.error('Enter the score first');
+    const parsed = parseFloat(score);
+    if (isNaN(parsed) || parsed < 0) return toast.error('Score must be a non-negative number');
+    setRecordingId(testId);
     try {
-      await chemistryTestAPI.update(testId, { status });
-      toast.success('Status updated');
+      await chemistryTestAPI.update(testId, { score: parsed });
+      toast.success('Score recorded');
+      setScoreInputs(p => { const n = { ...p }; delete n[testId]; return n; });
       fetchTests();
-    } catch { toast.error('Failed to update status'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to record score'); }
+    finally { setRecordingId(null); }
+  };
+
+  const copyLink = (link, id) => {
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(id);
+      setTimeout(() => setCopied(null), 2000);
+    });
   };
 
   const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400';
@@ -92,26 +115,56 @@ const ChemistryTestSection = ({ candidateId, candidateName }) => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-3 space-y-3">
+        <form onSubmit={handleCreate} className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-4 space-y-3">
+          <p className="text-xs font-semibold text-orange-700">New Chemistry Test</p>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Test Date</label>
-              <input type="date" className={inputCls} value={form.testDate} onChange={e => setForm(p => ({ ...p, testDate: e.target.value }))} />
+              <input type="date" className={inputCls} value={form.testDate}
+                onChange={e => setForm(p => ({ ...p, testDate: e.target.value }))} />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 mb-1 block">Remarks</label>
-              <input type="text" className={inputCls} value={form.remarks} placeholder="e.g. Lab test at site" onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))} />
+              <input type="text" className={inputCls} placeholder="e.g. Lab at HQ" value={form.remarks}
+                onChange={e => setForm(p => ({ ...p, remarks: e.target.value }))} />
             </div>
           </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Exam Link <span className="text-gray-400">(paste any URL — Google Form, Moodle, etc.)</span></label>
+            <input type="url" className={inputCls} placeholder="https://forms.google.com/..." value={form.examLink}
+              onChange={e => setForm(p => ({ ...p, examLink: e.target.value }))} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Max Score *</label>
+              <input type="text" inputMode="numeric" className={inputCls} placeholder="e.g. 100" value={form.maxScore}
+                onChange={e => setForm(p => ({ ...p, maxScore: e.target.value.replace(/[^\d.]/g, '') }))} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Passing Score *</label>
+              <input type="text" inputMode="numeric" className={inputCls} placeholder="e.g. 50" value={form.passingScore}
+                onChange={e => setForm(p => ({ ...p, passingScore: e.target.value.replace(/[^\d.]/g, '') }))} />
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-medium text-gray-600 mb-1 block">Notes</label>
-            <textarea rows={2} className={inputCls} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
+            <textarea rows={2} className={inputCls} value={form.notes}
+              onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
           </div>
+
           <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700 disabled:opacity-50">
-              {saving ? 'Saving…' : 'Assign'}
+            <button type="submit" disabled={saving}
+              className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded-lg hover:bg-orange-700 disabled:opacity-50">
+              {saving ? 'Assigning…' : 'Assign Test'}
             </button>
-            <button type="button" onClick={() => setShowForm(false)} className="px-3 py-1.5 border border-gray-200 text-gray-600 text-xs rounded-lg hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => setShowForm(false)}
+              className="px-3 py-1.5 border border-gray-200 text-gray-600 text-xs rounded-lg hover:bg-gray-50">
+              Cancel
+            </button>
           </div>
         </form>
       )}
@@ -119,24 +172,82 @@ const ChemistryTestSection = ({ candidateId, candidateName }) => {
       {loading ? (
         <p className="text-xs text-gray-400">Loading…</p>
       ) : tests.length === 0 ? (
-        <p className="text-xs text-gray-400 italic">No chemistry tests assigned yet</p>
+        <p className="text-xs text-gray-400 italic">No chemistry tests assigned yet. Click "Assign Test" to add one.</p>
       ) : (
-        <div className="space-y-2">
-          {tests.map(t => (
-            <div key={t.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-              <div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CHEM_STATUS_COLORS[t.status] || 'bg-gray-100 text-gray-600'}`}>{t.status}</span>
-                {t.testDate && <span className="text-xs text-gray-500 ml-2">{safeFormat(t.testDate, 'dd MMM yyyy')}</span>}
-                {t.remarks && <span className="text-xs text-gray-400 ml-2">— {t.remarks}</span>}
+        <div className="space-y-3">
+          {tests.map(t => {
+            const isPending = !['PASSED', 'FAILED'].includes(t.status);
+            return (
+              <div key={t.id} className="bg-gray-50 border border-gray-100 rounded-xl p-3 space-y-2">
+                {/* Header row */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CHEM_STATUS_COLORS[t.status] || 'bg-gray-100 text-gray-600'}`}>
+                      {t.status}
+                    </span>
+                    {t.testDate && (
+                      <span className="text-xs text-gray-500">{safeFormat(t.testDate, 'dd MMM yyyy')}</span>
+                    )}
+                    {t.remarks && (
+                      <span className="text-xs text-gray-400">— {t.remarks}</span>
+                    )}
+                  </div>
+                  {/* Score display */}
+                  {t.score != null && (
+                    <span className="text-xs font-semibold text-gray-700">
+                      Score: {t.score} / {t.maxScore ?? '—'}
+                      {t.passingScore != null && (
+                        <span className="ml-1 text-gray-400">(pass ≥ {t.passingScore})</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                {/* Exam link row */}
+                {t.examLink && (
+                  <div className="flex items-center gap-2">
+                    <a href={t.examLink} target="_blank" rel="noreferrer"
+                      className="text-xs text-indigo-600 hover:underline truncate max-w-[60%]">
+                      {t.examLink}
+                    </a>
+                    <button onClick={() => copyLink(t.examLink, t.id)}
+                      className="text-xs flex items-center gap-1 px-2 py-1 border border-gray-200 rounded-lg hover:bg-gray-100 text-gray-500 whitespace-nowrap">
+                      {copied === t.id ? <><CheckCircle size={11} className="text-green-600" /> Copied</> : <>Copy Link</>}
+                    </button>
+                  </div>
+                )}
+                {!t.examLink && isPending && (
+                  <p className="text-xs text-gray-400 italic">No exam link set</p>
+                )}
+
+                {/* Score entry row — only shown when test is not yet PASSED/FAILED */}
+                {isPending && (
+                  <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+                    <span className="text-xs text-gray-500 whitespace-nowrap">Record score:</span>
+                    <input
+                      type="text" inputMode="numeric"
+                      className="border border-gray-200 rounded-lg px-2 py-1 text-xs w-20 focus:outline-none focus:ring-1 focus:ring-orange-400"
+                      placeholder={`/ ${t.maxScore ?? '?'}`}
+                      value={scoreInputs[t.id] ?? ''}
+                      onChange={e => setScoreInputs(p => ({ ...p, [t.id]: e.target.value.replace(/[^\d.]/g, '') }))}
+                    />
+                    <button
+                      onClick={() => handleRecordScore(t.id)}
+                      disabled={recordingId === t.id}
+                      className="text-xs px-2.5 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap">
+                      {recordingId === t.id ? 'Saving…' : 'Submit Result'}
+                    </button>
+                    {t.passingScore != null && (
+                      <span className="text-xs text-gray-400">Pass ≥ {t.passingScore}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Notes */}
+                {t.notes && <p className="text-xs text-gray-500 italic">{t.notes}</p>}
               </div>
-              <select
-                value={t.status}
-                onChange={e => handleStatusUpdate(t.id, e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-orange-400">
-                {['PENDING', 'SCHEDULED', 'COMPLETED', 'PASSED', 'FAILED'].map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -676,6 +676,10 @@ model ChemistryTest {
   candidateId  String
   status       String    @default("PENDING")
   testDate     DateTime?
+  examLink     String?
+  score        Float?
+  maxScore     Float?
+  passingScore Float?
   remarks      String?
   notes        String?
   assignedById String
