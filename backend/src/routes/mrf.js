@@ -76,6 +76,9 @@ router.put('/:id', async (req, res) => {
 });
 
 router.post('/:id/approve', async (req, res) => {
+  if (req.user.role !== 'MANAGING_DIRECTOR' && req.user.role !== 'MD') {
+    return res.status(403).json({ message: 'Only the Managing Director can approve MRFs' });
+  }
   try {
     const mrf = await prisma.mRF.update({
       where: { id: req.params.id },

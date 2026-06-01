@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 
 const OfferForm = ({ onSuccess }) => {
   const [candidates, setCandidates] = useState([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     candidateId: '', designation: '', department: '', joiningDate: '',
@@ -15,7 +16,25 @@ const OfferForm = ({ onSuccess }) => {
   });
 
   useEffect(() => {
-    candidateAPI.getAll({ status: 'EXAM_COMPLETED', limit: 100 }).then(r => setCandidates(r.data.data)).catch(() => {});
+    // Fetch eligible candidates and existing offers, then exclude already-offered candidates
+    Promise.all([
+      candidateAPI.getAll({ status: 'EXAM_COMPLETED', limit: 200 }),
+      candidateAPI.getAll({ status: 'FINAL_APPROVED', limit: 200 }),
+      offerAPI.getAll(),
+    ]).then(([ec, fa, ofr]) => {
+      const existingOfferCandidateIds = new Set(
+        (Array.isArray(ofr.data) ? ofr.data : []).map(o => o.candidateId)
+      );
+      const all = [...(ec.data.data || []), ...(fa.data.data || [])];
+      // Deduplicate and remove candidates who already have an offer
+      const seen = new Set();
+      setCandidates(all.filter(c => {
+        if (seen.has(c.id) || existingOfferCandidateIds.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      }));
+    }).catch(() => {})
+      .finally(() => setLoadingCandidates(false));
   }, []);
 
   const calcSalary = (field, val) => {
@@ -33,6 +52,10 @@ const OfferForm = ({ onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.candidateId) return toast.error('Select a candidate');
+    if (!form.designation.trim()) return toast.error('Designation is required');
+    if (!form.department.trim()) return toast.error('Department is required');
+    const basic = parseFloat(form.basicSalary);
+    if (!form.basicSalary || isNaN(basic) || basic <= 0) return toast.error('Enter a valid basic salary');
     setLoading(true);
     try {
       await offerAPI.create({ ...form, expiryDate: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString() });
@@ -49,11 +72,22 @@ const OfferForm = ({ onSuccess }) => {
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
           <label className="text-xs font-medium text-gray-600 mb-1 block">Candidate *</label>
-          <select value={form.candidateId} onChange={e => setForm(p => ({ ...p, candidateId: e.target.value }))} className={inputCls} required>
-            <option value="">Select Candidate</option>
-            {candidates.map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName} ({c.candidateId})</option>)}
-          </select>
-          {candidates.length === 0 && <p className="text-xs text-amber-600 mt-1">No candidates with "Exam Completed" status</p>}
+          {loadingCandidates ? (
+            <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+              <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+              Loading eligible candidates…
+            </div>
+          ) : (
+            <select value={form.candidateId} onChange={e => setForm(p => ({ ...p, candidateId: e.target.value }))} className={inputCls} required>
+              <option value="">Select Candidate</option>
+              {candidates.map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName} ({c.candidateId}) — {c.status.replace(/_/g, ' ')}</option>)}
+            </select>
+          )}
+          {!loadingCandidates && candidates.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">
+              No eligible candidates. Candidates must have "Exam Completed" or "Final Approved" status and must not already have an offer letter.
+            </p>
+          )}
         </div>
         <div><label className="text-xs font-medium text-gray-600 mb-1 block">Designation *</label><input type="text" value={form.designation} onChange={e => setForm(p => ({ ...p, designation: e.target.value }))} className={inputCls} required /></div>
         <div><label className="text-xs font-medium text-gray-600 mb-1 block">Department *</label><input type="text" value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} className={inputCls} required /></div>

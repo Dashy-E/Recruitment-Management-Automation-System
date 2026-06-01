@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { candidateAPI, interviewAPI, userAPI } from '../../../services/api';
 import StatusBadge from '../../../components/common/StatusBadge';
 import Modal from '../../../components/common/Modal';
+import { JourneyBar } from '../../employee/Dashboard';
 import { ArrowLeft, MessageSquare, Calendar, Edit2, Check, X, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -152,11 +153,28 @@ const CandidateDetail = () => {
         </div>
         <div className="flex gap-2">
           <select value={candidate.status} onChange={e => handleStatusChange(e.target.value)} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            {['APPLIED', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'SELECTED', 'REJECTED', 'HOLD', 'TRAINING_PENDING', 'EXAM_PENDING', 'FINAL_APPROVED'].map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+            {[
+              'APPLIED', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'SELECTED',
+              'TRAINING_PENDING', 'TRAINING_IN_PROGRESS',
+              'EXAM_PENDING', 'EXAM_COMPLETED',
+              'FINAL_APPROVED', 'HOLD', 'REJECTED',
+              'OFFER_SENT', 'OFFER_ACCEPTED', 'OFFER_REJECTED', 'ONBOARDED',
+            ].map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
           </select>
           <button onClick={() => setShowInterviewForm(true)} className="flex items-center gap-1.5 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700">
             <Calendar size={14} /> Schedule Interview
           </button>
+        </div>
+      </div>
+
+      {/* Recruitment Journey */}
+      <div className="bg-white rounded-xl px-5 py-4 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Recruitment Journey</span>
+          <StatusBadge status={candidate.status} />
+        </div>
+        <div className="overflow-x-auto">
+          <JourneyBar status={candidate.status} />
         </div>
       </div>
 

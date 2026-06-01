@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
       prisma.interview.findMany({
         where,
         include: {
-          candidate: { select: { firstName: true, lastName: true, email: true, designation: true } },
+          candidate: { select: { firstName: true, lastName: true, email: true, designation: true, status: true } },
           scheduledBy: { select: { firstName: true, lastName: true } },
           feedback: { include: { interviewer: { select: { firstName: true, lastName: true } } } },
         },
@@ -45,7 +45,7 @@ router.get('/today', async (req, res) => {
 
     const interviews = await prisma.interview.findMany({
       where: { scheduledAt: { gte: today, lt: tomorrow }, status: 'SCHEDULED' },
-      include: { candidate: { select: { firstName: true, lastName: true, designation: true } } },
+      include: { candidate: { select: { firstName: true, lastName: true, designation: true, status: true } } },
     });
     res.json(interviews);
   } catch (e) {
@@ -125,6 +125,11 @@ router.post('/:id/complete', async (req, res) => {
     const interview = await prisma.interview.update({
       where: { id: req.params.id },
       data: { status: 'COMPLETED', completedAt: new Date() },
+    });
+    // Move candidate to SELECTED — indicates all interview rounds done, ready for next step
+    await prisma.candidate.update({
+      where: { id: interview.candidateId },
+      data: { status: 'SELECTED' },
     });
     res.json(interview);
   } catch (e) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { mrfAPI, offerAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../../components/common/StatusBadge';
 import toast from 'react-hot-toast';
 import { ShieldCheck, FileText, Mail, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
@@ -23,6 +24,8 @@ const EmptyRow = ({ cols, msg }) => (
 );
 
 const Approvals = () => {
+  const { user } = useAuth();
+  const isMD = user?.role === 'MD' || user?.role === 'MANAGING_DIRECTOR';
   const [mrfs, setMrfs] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,8 +40,8 @@ const Approvals = () => {
         mrfAPI.getAll({ status: 'PENDING', limit: 50 }),
         offerAPI.getAll({ status: 'DRAFT', limit: 50 }),
       ]);
-      setMrfs(m.data.mrfs || []);
-      setOffers(o.data.offers || []);
+      setMrfs(m.data.data || []);
+      setOffers(Array.isArray(o.data) ? o.data : []);
     } catch {
       toast.error('Failed to load approvals');
     } finally {
@@ -139,22 +142,26 @@ const Approvals = () => {
                           <td className="px-5 py-3.5"><StatusBadge status={mrf.priority} /></td>
                           <td className="px-5 py-3.5 text-gray-400 text-xs">{format(new Date(mrf.createdAt), 'dd MMM yyyy')}</td>
                           <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => approveMRF(mrf.id)}
-                                disabled={acting}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
-                              >
-                                <CheckCircle size={13} /> Approve
-                              </button>
-                              <button
-                                onClick={() => { setRejectModal({ type: 'mrf', id: mrf.id }); setRejectReason(''); }}
-                                disabled={acting}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 disabled:opacity-50"
-                              >
-                                <XCircle size={13} /> Reject
-                              </button>
-                            </div>
+                            {isMD ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => approveMRF(mrf.id)}
+                                  disabled={acting}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  <CheckCircle size={13} /> Approve
+                                </button>
+                                <button
+                                  onClick={() => { setRejectModal({ type: 'mrf', id: mrf.id }); setRejectReason(''); }}
+                                  disabled={acting}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 disabled:opacity-50"
+                                >
+                                  <XCircle size={13} /> Reject
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">MD approval required</span>
+                            )}
                           </td>
                         </tr>
                       ))

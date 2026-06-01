@@ -19,7 +19,7 @@ router.get('/', authenticate, authorize(...HR_ROLES), async (req, res) => {
       prisma.incomingMail.findMany({
         where,
         include: {
-          agency: { select: { id: true, name: true, agencyType: true } },
+          agency: { select: { id: true, name: true } },
           mrf: { select: { id: true, mrfNumber: true, designation: true } },
           outreach: { select: { id: true, subject: true, sentAt: true } },
         },

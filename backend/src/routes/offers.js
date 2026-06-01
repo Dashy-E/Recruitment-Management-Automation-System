@@ -54,11 +54,18 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const existing = await prisma.offerLetter.findUnique({ where: { candidateId: req.body.candidateId } });
-    if (existing) return res.status(409).json({ message: 'Offer letter already exists for this candidate' });
+    const { candidateId, designation, department, basicSalary } = req.body;
+    if (!candidateId) return res.status(400).json({ message: 'Candidate is required' });
+    if (!designation?.trim()) return res.status(400).json({ message: 'Designation is required' });
+    if (!department?.trim()) return res.status(400).json({ message: 'Department is required' });
+    const basic = parseFloat(basicSalary);
+    if (!basicSalary || isNaN(basic) || basic <= 0) return res.status(400).json({ message: 'A valid basic salary is required' });
+
+    const existing = await prisma.offerLetter.findUnique({ where: { candidateId } });
+    if (existing) return res.status(409).json({ message: 'An offer letter already exists for this candidate. View it in the Offer Letters list.' });
 
     const offerNumber = await generateOfferNumber();
-    const { allowances, deductions, ...rest } = req.body;
+    const { allowances, deductions, joiningDate, ...rest } = req.body;
     const offer = await prisma.offerLetter.create({
       data: {
         ...rest,
@@ -71,6 +78,7 @@ router.post('/', async (req, res) => {
         netSalary: parseFloat(rest.netSalary),
         ctc: parseFloat(rest.ctc),
         expiryDate: new Date(rest.expiryDate),
+        ...(joiningDate ? { joiningDate: new Date(joiningDate) } : {}),
       },
       include: { candidate: { select: { firstName: true, lastName: true } } },
     });

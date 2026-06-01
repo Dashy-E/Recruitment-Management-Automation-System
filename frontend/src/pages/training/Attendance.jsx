@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { trainingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { UserCheck, Save } from 'lucide-react';
@@ -9,56 +9,88 @@ const TrainingAttendance = () => {
   const [batchDetail, setBatchDetail] = useState(null);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [attendance, setAttendance] = useState({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     trainingAPI.getBatches().then(r => setBatches(r.data)).catch(() => {});
   }, []);
 
+  const loadAttendance = useCallback(async (batchId, selectedDate, enrollments) => {
+    if (!batchId || !selectedDate || !enrollments) return;
+    try {
+      const res = await trainingAPI.getAttendance(batchId, { date: selectedDate });
+      const saved = {};
+      enrollments.forEach(e => { saved[e.candidateId] = false; });
+      (res.data || []).forEach(r => { saved[r.candidateId] = r.present; });
+      setAttendance(saved);
+    } catch {
+      const fallback = {};
+      enrollments.forEach(e => { fallback[e.candidateId] = false; });
+      setAttendance(fallback);
+    }
+  }, []);
+
   const loadBatch = async (batchId) => {
     setSelectedBatch(batchId);
-    if (!batchId) { setBatchDetail(null); return; }
+    if (!batchId) { setBatchDetail(null); setAttendance({}); return; }
     try {
       const res = await trainingAPI.getBatchById(batchId);
       setBatchDetail(res.data);
-      const initial = {};
-      res.data.enrollments?.forEach(e => { initial[e.candidateId] = false; });
-      setAttendance(initial);
+      await loadAttendance(batchId, date, res.data.enrollments);
     } catch { toast.error('Failed to load batch'); }
   };
+
+  useEffect(() => {
+    if (selectedBatch && batchDetail) {
+      loadAttendance(selectedBatch, date, batchDetail.enrollments);
+    }
+  }, [date, selectedBatch, batchDetail, loadAttendance]);
 
   const toggleAttendance = (candidateId) => setAttendance(p => ({ ...p, [candidateId]: !p[candidateId] }));
 
   const saveAttendance = async () => {
     if (!selectedBatch || !date) return toast.error('Select batch and date');
     const records = Object.entries(attendance).map(([candidateId, present]) => ({ candidateId, present }));
+    setSaving(true);
     try {
       await trainingAPI.markAttendance({ batchId: selectedBatch, date, records });
-      toast.success('Attendance saved');
+      toast.success(`Attendance saved — ${records.filter(r => r.present).length} present`);
     } catch { toast.error('Failed to save attendance'); }
+    finally { setSaving(false); }
   };
 
   const presentCount = Object.values(attendance).filter(Boolean).length;
+  const total = batchDetail?.enrollments?.length || 0;
 
   return (
     <div className="space-y-5">
       <h2 className="text-lg font-semibold text-gray-800">Attendance Management</h2>
 
       <div className="flex gap-3 flex-wrap">
-        <select value={selectedBatch} onChange={e => loadBatch(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-48">
+        <select
+          value={selectedBatch}
+          onChange={e => loadBatch(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 min-w-48"
+        >
           <option value="">Select Training Batch</option>
           {batches.map(b => <option key={b.id} value={b.id}>{b.batchName}</option>)}
         </select>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        <input
+          type="date"
+          value={date}
+          onChange={e => setDate(e.target.value)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
       </div>
 
-      {batchDetail && (
+      {batchDetail ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="px-5 py-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
               <UserCheck size={16} className="text-emerald-600" />
               <span className="font-semibold text-gray-800 text-sm">{batchDetail.batchName} · {date}</span>
             </div>
-            <span className="text-sm text-gray-500">{presentCount}/{batchDetail.enrollments?.length || 0} present</span>
+            <span className="text-sm text-gray-500">{presentCount}/{total} present</span>
           </div>
           <div className="divide-y divide-gray-100">
             {batchDetail.enrollments?.map(e => (
@@ -68,22 +100,37 @@ const TrainingAttendance = () => {
                   <p className="text-xs text-gray-400">{e.candidate?.designation}</p>
                 </div>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <div onClick={() => toggleAttendance(e.candidateId)} className={`w-12 h-6 rounded-full transition-colors ${attendance[e.candidateId] ? 'bg-emerald-500' : 'bg-gray-200'} relative`}>
+                  <div
+                    onClick={() => toggleAttendance(e.candidateId)}
+                    className={`w-12 h-6 rounded-full transition-colors ${attendance[e.candidateId] ? 'bg-emerald-500' : 'bg-gray-200'} relative`}
+                  >
                     <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${attendance[e.candidateId] ? 'left-7' : 'left-1'}`} />
                   </div>
-                  <span className={`text-xs font-medium ${attendance[e.candidateId] ? 'text-emerald-600' : 'text-gray-400'}`}>{attendance[e.candidateId] ? 'Present' : 'Absent'}</span>
+                  <span className={`text-xs font-medium ${attendance[e.candidateId] ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    {attendance[e.candidateId] ? 'Present' : 'Absent'}
+                  </span>
                 </label>
               </div>
             ))}
+            {total === 0 && (
+              <div className="px-5 py-8 text-center text-sm text-gray-400">No candidates enrolled in this batch</div>
+            )}
           </div>
           <div className="px-5 py-4 border-t bg-gray-50">
-            <button onClick={saveAttendance} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors">
-              <Save size={15} /> Save Attendance
+            <button
+              onClick={saveAttendance}
+              disabled={saving || total === 0}
+              className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors disabled:opacity-60"
+            >
+              <Save size={15} /> {saving ? 'Saving…' : 'Save Attendance'}
             </button>
           </div>
         </div>
+      ) : (
+        <div className="bg-white rounded-xl p-10 text-center text-gray-400 shadow-sm border border-gray-100 text-sm">
+          Select a training batch to mark attendance
+        </div>
       )}
-      {!selectedBatch && <div className="bg-white rounded-xl p-10 text-center text-gray-400 shadow-sm border border-gray-100 text-sm">Select a training batch to mark attendance</div>}
     </div>
   );
 };

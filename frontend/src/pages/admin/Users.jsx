@@ -34,7 +34,12 @@ const UserForm = ({ user, departments, onSuccess }) => {
         <div><label className="text-xs font-medium text-gray-600 mb-1 block">First Name *</label><input type="text" value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} className={inputCls} required /></div>
         <div><label className="text-xs font-medium text-gray-600 mb-1 block">Last Name *</label><input type="text" value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} className={inputCls} required /></div>
         <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-1 block">Email *</label><input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className={inputCls} required /></div>
-        {!user && <div className="col-span-2"><label className="text-xs font-medium text-gray-600 mb-1 block">Password *</label><input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className={inputCls} required={!user} placeholder="Minimum 8 characters" /></div>}
+        <div className="col-span-2">
+          <label className="text-xs font-medium text-gray-600 mb-1 block">
+            Password {user ? <span className="font-normal text-gray-400">(leave blank to keep current)</span> : '*'}
+          </label>
+          <input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} className={inputCls} required={!user} placeholder={user ? 'Enter new password to change' : 'Minimum 8 characters'} />
+        </div>
         <div><label className="text-xs font-medium text-gray-600 mb-1 block">Role *</label><select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} className={inputCls}>
           {ROLES.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
         </select></div>

@@ -104,10 +104,76 @@
 [x] **Chemistry test in probation** — confirmed already fully implemented: `ChemistryTestSection` component with assign form, status update, date/remarks, embedded in probation detail modal  
 [x] **AgencyDashboard submit** — changed to send plain JSON instead of FormData when creating candidate via Submit Candidate form  
 
+## Completed (Session 8 — Bug Fixes & Feature Completions)
+
+[x] **Employee Documents page** — replaced fake upload stub with in-app form; `EmployeeDocument` model added to schema; validated fields (type, number, issuing authority, issue/expiry dates)  
+[x] **Email center candidates** — fixed data path bug (`r.data.candidates` → `r.data.data`); candidates now load in compose "To" dropdown  
+[x] **Incoming mail "failed to load"** — removed `agencyType` from Agency select in incomingMail.js (field not in current schema)  
+[x] **Offer letter create fails** — fixed empty `joiningDate` (`''`) causing Prisma DateTime error; only set when provided  
+[x] **User edit — password field** — optional password change field added to edit form; blank = keep existing  
+[x] **Approvals page — data paths** — fixed `m.data.mrfs` → `m.data.data` and `o.data.offers` → `o.data` (array); approve/reject now works and items disappear  
+[x] **MRF experience field** — numeric-only input, strips non-digits, max 2 chars, labelled in years  
+[x] **Employee Exams page** — replaced static stub with real API; matches user email → candidate → exam attempts; shows link, score, pass/fail  
+[x] **Training attendance reload** — attendance now reloads saved records from backend on batch/date change; Save shows count  
+[x] **Test employee created** — `employee@recruitment.com` / `Admin@123` has matching candidate CAND-0006 (Alex Kumar, EXAM_COMPLETED) for end-to-end flow testing  
+
+## Completed (Session 9 — Flow Fixes & Training Enrollment)
+
+[x] **MRF form — full per-field validation** — inline errors on blur for: department (required), designation (2–100 chars), vacancies (1–999 numeric), experience (0–99 numeric), salary min/max (numeric; max > min), reporting manager (letters + punctuation), description (5000 char limit with counter), skills (letters/numbers/+#.-/, max 50 chars, no duplicates); submit blocked until all pass  
+[x] **Interview Complete → candidate status** — backend `POST /interviews/:id/complete` now also updates candidate to `SELECTED`; toast confirms "candidate moved to Selected"  
+[x] **InterviewList — candidate name search** — search box filters by first+last name client-side; limit raised 20 → 100 so all interviews load; empty state explains interviews are scheduled from candidate detail page  
+[x] **Training Batches — Enroll Candidates** — "Enroll Candidates" button in batch detail modal fetches SELECTED candidates not yet in the batch; multi-select → enroll via `POST /training/batches/:id/enroll`; enrolling sets candidate status to TRAINING_IN_PROGRESS  
+[x] **Training Batches — Create Batch form** — "New Batch" button added with fully validated modal form (batch name, designation, dates, capacity, trainer, location)  
+[x] **Offer form — required field validation** — `designation`, `department`, `basicSalary > 0` validated before submit; clear toast errors instead of silent 500  
+[x] **Offer backend — proper 400 errors** — `POST /offers` now validates candidateId, designation, department, and basicSalary server-side; returns 400 with readable message instead of crashing with 500 on NaN salary  
+[x] **Offer form — FINAL_APPROVED candidates** — dropdown now fetches both `EXAM_COMPLETED` and `FINAL_APPROVED` candidates; allows offer creation for manually-approved hires  
+[x] **CandidateDetail status dropdown** — added all missing statuses: `TRAINING_IN_PROGRESS`, `EXAM_COMPLETED`, `OFFER_SENT`, `OFFER_ACCEPTED`, `OFFER_REJECTED`, `ONBOARDED`; current status always matches a dropdown option (no more blank select)  
+
+## Completed (Session 10 — Interview Scheduling, Exam Batch, Offer Fix, Dynamic Journey)
+
+[x] **Central interview scheduling** — "Schedule Interview" button added directly to InterviewList page header; modal with candidate dropdown (SHORTLISTED / INTERVIEW_SCHEDULED / SELECTED), round, type, date+time (future only, validated), duration, mode, meeting URL (required + URL-validated for ONLINE, disabled for PHONE), notes; confirmation email sent automatically on schedule  
+[x] **MRF approval — MD only** — backend `POST /mrf/:id/approve` now returns 403 if caller role isn't `MD` or `MANAGING_DIRECTOR`; Approvals.jsx hides Approve/Reject buttons for non-MD users and shows "MD approval required" label instead; MD login: `md@recruitment.com` / `Admin@123`  
+[x] **Exam batch link generation** — GenerateLinkForm replaced single dropdown with multi-select checkbox list of EXAM_PENDING candidates; "Select all" toggle; generates links sequentially and shows a results panel with per-candidate Copy Link buttons and failure reasons; score/expiry validation added to both generate form and result entry  
+[x] **Offer form — exclude already-offered candidates** — fetches existing offers on load and removes candidates who already have one from the dropdown; explains "must not already have an offer letter" when list is empty; shows loading state while fetching; includes current status label in dropdown  
+[x] **Dynamic recruitment journey — Employee Dashboard** — journey stepper now fetches real candidate record by email match; `JOURNEY_STEPS` mapping exported; steps filled based on actual status (Applied → Shortlisted → Interview → Training → Exam → Offer → Onboarded); current step label shown as badge; REJECTED shown in red  
+[x] **Journey stepper on CandidateDetail** — horizontal `JourneyBar` component (imported from employee/Dashboard) inserted between header and tabs on every candidate detail page; shows which stage is done (✓), current (pulsing ring), and upcoming (gray)  
+[x] **InterviewList — candidate current status badge** — each interview card now shows "Candidate now: ONBOARDED" (or whatever their current status is) when the candidate has moved beyond INTERVIEW_SCHEDULED; green for progression, red for REJECTED; backend `/interviews` GET updated to include `status` in candidate select  
+
+## Known Behaviour (Not Bugs)
+
+- **Recruitment journey steps** — Applied → Shortlisted → Interview (INTERVIEW_SCHEDULED or SELECTED) → Training (TRAINING_PENDING or TRAINING_IN_PROGRESS) → Exam (EXAM_PENDING, EXAM_COMPLETED, FINAL_APPROVED) → Offer (OFFER_SENT, OFFER_ACCEPTED, OFFER_REJECTED) → Onboarded. REJECTED can appear at any stage.  
+- **Interview Complete = SELECTED** — Complete moves candidate to SELECTED regardless of round count. Schedule round 2 from the same Schedule Interview button after round 1 completes.  
+- **MRF approval is MD-only** — only `md@recruitment.com` sees Approve/Reject on the Approvals page. Other management roles see a label.  
+- **Exam link requires EXAM_PENDING status** — training enrollment must be marked Complete first (sets EXAM_PENDING). Exam link generation then appears in the multi-select list.  
+- **Offer form shows no candidates if all are already offered** — this is correct; each candidate can only have one offer. Create a new candidate to test the offer flow again.  
+- **Priya Patel seed data** — seed set her status to INTERVIEW_SCHEDULED but created no Interview record. Schedule via Interviews page → "Schedule Interview" → select Priya.  
+- **Chemistry test vs probation status** — independent fields; chemistry PASSED does not auto-pass probation.  
+- **AI screening MRF dropdown** — client-side filter only; select MRF + JD then click "Run Batch Screen."  
+- **System Settings** — localStorage only, no backend effect.  
+- **Active/Inactive users** — inactive users are blocked at login.  
+- **Approval chain** — MRFs: MD only. Offers: single-level (any management). Probation: BM → CM → MD chain.  
+
+## Full Test Flow (Recruiter → Employee)
+
+1. **Admin** (`admin@recruitment.com`) — verify departments and users exist  
+2. **Recruiter** (`recruiter@recruitment.com`) — Candidates → Add Candidate  
+3. **Recruiter** — MRF → Create MRF → Submit for Approval (status: PENDING)  
+4. **MD** (`md@recruitment.com`) — Approvals → Approve MRF (status: APPROVED)  
+5. **Recruiter** — Interviews → Schedule Interview → select candidate → future date → Submit (candidate: INTERVIEW_SCHEDULED)  
+6. **Recruiter** — Interviews → Complete interview → candidate auto-moves to **SELECTED**  
+7. **Training** (`training@recruitment.com`) — Batches → open or create batch → Enroll Candidates → select candidate (candidate: TRAINING_IN_PROGRESS)  
+8. **Training** — Batches → open batch → Mark Complete on enrollment (candidate: EXAM_PENDING)  
+9. **Recruiter** — Exams → Generate Links → tick candidate → fill exam name/scores → Generate → copy link → record result PASS (candidate: EXAM_COMPLETED)  
+10. **Recruiter** — Offers → Create Offer → select candidate → fill designation, department, salary → Create (status: DRAFT)  
+11. **MD** — Approvals → approve offer (status: APPROVED)  
+12. **Recruiter** — Offers → Send offer (candidate: OFFER_SENT)  
+13. **Employee** (`employee@recruitment.com`) — Offers → Accept (candidate: OFFER_ACCEPTED)  
+14. **Recruiter** — Appointment Letters → generate (candidate: ONBOARDED)  
+15. **Management** — Probation → create record → assign chemistry test → approve chain (BM → CM → MD)  
+
 ## Still Pending
 
 - [ ] **Agencies contacted → save to database** — when HR contacts an agency via outreach, agency communication history should be viewable in the agency detail page  
-- [ ] **Replace training section with offer section** — needs scope clarification from user  
 
 ---
 

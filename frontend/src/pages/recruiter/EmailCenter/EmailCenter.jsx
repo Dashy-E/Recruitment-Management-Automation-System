@@ -23,7 +23,7 @@ export default function EmailCenter() {
   useEffect(() => {
     communicationAPI.getTemplates().then(r => setTemplates(r.data)).catch(() => {});
     communicationAPI.getAll({ limit: 50 }).then(r => setCommunications(r.data.communications || [])).catch(() => {});
-    candidateAPI.getAll({ limit: 100 }).then(r => setCandidates(r.data.candidates || [])).catch(() => {});
+    candidateAPI.getAll({ limit: 100 }).then(r => setCandidates(r.data.data || [])).catch(() => {});
   }, []);
 
   const handlePreview = async (tmplId) => {
