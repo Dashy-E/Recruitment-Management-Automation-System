@@ -23,7 +23,7 @@ export default function AIScreening() {
   const [showJdForm, setShowJdForm] = useState(false);
 
   useEffect(() => {
-    mrfAPI.getAll({ status: 'APPROVED', limit: 50 }).then(r => setMrfs(r.data.mrfs || [])).catch(() => {});
+    mrfAPI.getAll({ status: 'APPROVED', limit: 50 }).then(r => setMrfs(r.data.data || [])).catch(() => {});
     aiScreeningAPI.getAllJDs().then(r => setJDs(r.data)).catch(() => {});
     aiScreeningAPI.getResults({ limit: 50 }).then(r => setResults(r.data.results || [])).catch(() => {});
   }, []);

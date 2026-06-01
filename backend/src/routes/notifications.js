@@ -20,21 +20,22 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.put('/:id/read', async (req, res) => {
-  try {
-    const n = await prisma.notification.update({ where: { id: req.params.id }, data: { read: true } });
-    res.json(n);
-  } catch (e) {
-    res.status(500).json({ message: 'Failed to mark notification as read' });
-  }
-});
-
+// Must be defined before /:id/read so Express doesn't treat 'mark-all-read' as a param value
 router.put('/mark-all-read', async (req, res) => {
   try {
     await prisma.notification.updateMany({ where: { userId: req.user.id, read: false }, data: { read: true } });
     res.json({ message: 'All notifications marked as read' });
   } catch (e) {
     res.status(500).json({ message: 'Failed to mark all read' });
+  }
+});
+
+router.put('/:id/read', async (req, res) => {
+  try {
+    const n = await prisma.notification.update({ where: { id: req.params.id }, data: { read: true } });
+    res.json(n);
+  } catch (e) {
+    res.status(500).json({ message: 'Failed to mark notification as read' });
   }
 });
 

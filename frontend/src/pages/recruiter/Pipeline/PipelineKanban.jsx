@@ -17,7 +17,7 @@ export default function PipelineKanban() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    mrfAPI.getAll({ status: 'APPROVED', limit: 50 }).then(r => setMrfs(r.data.mrfs || [])).catch(() => {});
+    mrfAPI.getAll({ status: 'APPROVED', limit: 50 }).then(r => setMrfs(r.data.data || [])).catch(() => {});
   }, []);
 
   useEffect(() => {

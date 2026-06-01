@@ -177,6 +177,252 @@
 
 ---
 
+---
+
+## Stabilization Plan (Session 11)
+
+Full codebase review identified 49 issues. Categorized below into 5 phases.  
+**Only Phase 1 is being implemented now. Phases 2–5 await approval.**
+
+---
+
+### Phase 1 — Critical Functionality (Broken features, crashes, silent failures)
+
+| # | Issue | Severity | Files Affected | Risk | Auto |
+|---|---|---|---|---|---|
+| P1-01 | Pipeline Kanban MRF dropdown always empty — `r.data.mrfs` should be `r.data.data` | CRITICAL | `PipelineKanban.jsx` | Low | Yes |
+| P1-02 | AI Screening MRF dropdown always empty — same wrong key as P1-01 | CRITICAL | `AIScreening.jsx` | Low | Yes |
+| P1-03 | `PUT /notifications/mark-all-read` is unreachable — Express matches it as `/:id/read` because it's defined after the param route | CRITICAL | `notifications.js` | Low | Yes |
+| P1-04 | Offer rejection in Approvals silently does nothing — `confirmReject()` only calls the API when `type === 'mrf'`; the `toast.success` fires regardless, giving false confirmation | CRITICAL | `Approvals.jsx` | Low | Yes |
+| P1-05 | `GET /agencies/my` crashes backend — calls `prisma.agencyPartner.findFirst()` but `AgencyPartner` model doesn't exist in schema; AGENCY_PARTNER portal was removed in Session 6 | CRITICAL | `agencies.js` | Low | Yes (remove route) |
+
+---
+
+### Phase 2 — Security (Authorization flaws, unsafe updates, exposed data)
+
+| # | Issue | Severity | Files Affected | Risk | Auto |
+|---|---|---|---|---|---|
+| P2-01 | `POST /departments` and `PUT /departments/:id` have no role guard — any logged-in user can create or rename departments | HIGH | `departments.js` | Low | Yes |
+| P2-02 | `POST /offers/:id/approve` has no role guard — any logged-in user can approve offer letters | HIGH | `offers.js` | Low | Yes |
+| P2-03 | `POST /mrf/:id/reject` has no role guard — any logged-in user can reject MRFs | HIGH | `mrf.js` | Low | Yes |
+| P2-04 | `POST /mrf/:id/submit` has no ownership or role check — any user can submit any MRF | MEDIUM | `mrf.js` | Medium | Partial |
+| P2-05 | Dead `'MANAGING_DIRECTOR'` role check in MRF approve — the actual role stored is `'MD'`; the MANAGING_DIRECTOR branch can never be satisfied | MEDIUM | `mrf.js` | Low | Yes |
+| P2-06 | `PUT /candidates/:id` spreads entire `req.body` — client can overwrite system fields like `addedById`, `deletedAt`, `candidateId` | HIGH | `candidates.js` | Medium | Yes |
+| P2-07 | `GET /users` returns all user emails, roles, and last-login to any logged-in user with no role guard | MEDIUM | `users.js` | Low | Yes |
+| P2-08 | `PUT /auth/change-password` has no input validation — undefined passwords cause bcrypt to throw | LOW | `auth.js` | Low | Yes |
+| P2-09 | `GET /exams/token/:token` requires JWT auth but candidates accessing exam links may not be logged in | MEDIUM | `exams.js` | Medium | Manual |
+| P2-10 | CSV import and document upload routes are still live in `candidates.js` — violates no-upload policy | HIGH | `candidates.js` | Low | Yes (confirm) |
+
+---
+
+### Phase 3 — Policy Compliance (Dead code that conflicts with project requirements)
+
+| # | Issue | Severity | Files Affected | Risk | Auto |
+|---|---|---|---|---|---|
+| P3-01 | `Sourcing.jsx` still exists and imports `sourcingAPI` which was removed in Session 7 — file is not in the router so it's not reachable, but is confusing dead code | LOW | `Sourcing.jsx`, `api.js` | Low | Yes (delete file) |
+| P3-02 | `POST /candidates/import/csv` and `POST /candidates/:id/documents` still exist in backend — upload policy violation (frontend was cleaned in Session 7 but backend routes remain) | HIGH | `candidates.js` | Low | Yes |
+| P3-03 | `multer` import and setup still in `candidates.js` even though upload is disallowed | MEDIUM | `candidates.js` | Low | Yes |
+
+---
+
+### Phase 4 — Performance (Inefficient queries, N+1 patterns)
+
+| # | Issue | Severity | Files Affected | Risk | Auto |
+|---|---|---|---|---|---|
+| P4-01 | Training batch enrollment does N×3 queries — `findUnique` + `create` + `update` per candidate in a loop; should be `createMany` + `updateMany` | MEDIUM | `training.js` | Medium | Yes |
+| P4-02 | Agency performance stats fetches all submissions into memory and filters in JS — should use `groupBy` | MEDIUM | `agencies.js` | Low | Yes |
+| P4-03 | `/agencies/my` double-queries submissions — fetches agency with 20 submissions then re-fetches all submissions again | MEDIUM | `agencies.js` | Low | Yes |
+| P4-04 | AI screening algorithm duplicated verbatim between `/screen` and `/screen/batch` — bug fixes must be applied twice | MEDIUM | `aiScreening.js` | Low | Yes |
+| P4-05 | `reports.js` uses SQLite-specific raw SQL (`strftime`) — will break on PostgreSQL migration | LOW (now) | `reports.js` | Low | Manual |
+| P4-06 | Sequential ID generators (`count() + 1`) have a race condition — concurrent inserts can get the same generated ID | HIGH | `helpers.js` | High | Manual |
+
+---
+
+### Phase 5 — Maintainability (Dead code, inconsistencies, error handling)
+
+| # | Issue | Severity | Files Affected | Risk | Auto |
+|---|---|---|---|---|---|
+| P5-01 | Error responses in sourcing, communications, aiScreening, incomingMail use `{ error }` instead of `{ message }` — frontend error extraction silently fails for these 4 modules | MEDIUM | `sourcing.js`, `communications.js`, `aiScreening.js`, `incomingMail.js` | Low | Yes |
+| P5-02 | Dashboard `.catch(() => {})` blocks swallow all errors — users see empty data with no explanation | MEDIUM | All 5 dashboard files | Low | Yes |
+| P5-03 | Unused import `createNotification` in `mrf.js` | LOW | `mrf.js` | Low | Yes |
+| P5-04 | Dead `tab` state in `AIScreening.jsx` — `setTab` never called | LOW | `AIScreening.jsx` | Low | Yes |
+| P5-05 | Unused import `userAPI` in `CandidateDetail.jsx` | LOW | `CandidateDetail.jsx` | Low | Yes |
+| P5-06 | Unused import `Filter` in `MRFList.jsx` | LOW | `MRFList.jsx` | Low | Yes |
+| P5-07 | Function named `fetch` in `CandidateDetail.jsx` shadows `window.fetch` | LOW | `CandidateDetail.jsx` | Low | Yes |
+| P5-08 | MRF reject allows empty reason at backend | MEDIUM | `mrf.js` | Low | Yes |
+| P5-09 | MRF submit doesn't check current status — can re-submit an already-APPROVED MRF | MEDIUM | `mrf.js` | Low | Yes |
+| P5-10 | Empty comment can be saved; any user can edit any comment (no ownership check) | MEDIUM | `candidates.js` | Low | Yes |
+| P5-11 | Training enrollment missing `candidateIds` array validation | LOW | `training.js` | Low | Yes |
+| P5-12 | `paginate()` helper used inconsistently — some routes inline the skip/take math | LOW | `users.js`, `probation.js`, `auditLogs.js`, `chemistryTests.js` | Low | Yes |
+| P5-13 | `window.confirm()` / `window.prompt()` used for destructive actions in 6 pages — not consistent with the app's modal pattern | MEDIUM | Multiple pages | Medium | Manual |
+| P5-14 | Admin and employee dashboards render empty KPI cards with no loading state | LOW | `AdminDashboard.jsx`, `EmployeeDashboard.jsx` | Low | Yes |
+| P5-15 | Double-submit risk on create forms with no `saving` state (AgencyList, Departments, others) | LOW | Multiple pages | Low | Yes |
+
+---
+
+---
+
+## Phase 1 Changes (Session 11 — Implemented)
+
+### P1-01 — Pipeline Kanban MRF dropdown fixed
+**File modified:** `frontend/src/pages/recruiter/Pipeline/PipelineKanban.jsx` (line 20)  
+**Root cause:** `mrfAPI.getAll()` returns `{ data: [...], total, page, totalPages }`. The code read `r.data.mrfs` which doesn't exist on that shape — always `undefined`, fell back to `[]`. MRF select was permanently empty.  
+**Fix applied:** Changed `r.data.mrfs || []` → `r.data.data || []`  
+**Expected behavior:** MRF dropdown in Pipeline Kanban now populates with APPROVED MRFs. Selecting one loads its candidate pipeline stages.
+
+---
+
+### P1-02 — AI Screening MRF dropdown fixed
+**File modified:** `frontend/src/pages/recruiter/AIScreening/AIScreening.jsx` (line 26)  
+**Root cause:** Identical bug to P1-01 — same wrong response key `r.data.mrfs`.  
+**Fix applied:** Changed `r.data.mrfs || []` → `r.data.data || []`  
+**Expected behavior:** MRF dropdown in AI Screening now populates. "Run Batch Screen" button becomes enabled when an MRF and JD are both selected.
+
+---
+
+### P1-03 — Notifications "Mark all read" now works
+**File modified:** `backend/src/routes/notifications.js` (route order swapped)  
+**Root cause:** Express matches routes in registration order. `PUT /:id/read` was registered before `PUT /mark-all-read`. When the client called `PUT /notifications/mark-all-read`, Express treated the string `mark-all-read` as the `:id` parameter and routed it to the single-read handler — which then failed to find a notification with id `mark-all-read`. The bulk-read handler was unreachable.  
+**Fix applied:** Moved `PUT /mark-all-read` above `PUT /:id/read`. Added a comment explaining the ordering requirement.  
+**Expected behavior:** Clicking "Mark all read" in the notification bell now marks all unread notifications as read in one call.
+
+---
+
+### P1-04 — Offer rejection no longer silently fails
+**File modified:** `frontend/src/pages/management/Approvals.jsx` (lines 80–84)  
+**Root cause:** `confirmReject()` had `if (rejectModal.type === 'mrf') { await mrfAPI.reject(...) }` with no `else if` for offers. The `toast.success('Rejected successfully')` fired regardless — even when type was `'offer'` and no API call was made. Result: the UI showed success, the list refreshed, but the offer's status never changed in the database.  
+**Fix applied:** Added `else if (rejectModal.type === 'offer') { await offerAPI.reject(...) }` branch. The offer API call is now made before the success toast.  
+**Expected behavior:** When a management user rejects an offer letter via the Approvals page, the offer's status updates in the database. (Note: a "Reject" button for offers is not visible in the current UI — this fix ensures correctness when the UI gains that button.)
+
+---
+
+### P1-05 — Backend no longer crashes on agency partner route
+**File modified:** `backend/src/routes/agencies.js` (removed `GET /my` route)  
+**Root cause:** The `GET /agencies/my` route called `prisma.agencyPartner.findFirst()`. The `AgencyPartner` model was never added to `schema.prisma`. Prisma throws a runtime error on any call to a non-existent model, resulting in a 500 response with the raw Prisma error. The AGENCY_PARTNER portal and role were retired in Session 6, making this route dead and dangerous.  
+**Fix applied:** Removed the `GET /my` route body entirely. Left a comment explaining why it was removed.  
+**Expected behavior:** No crash. The `/api/agencies` endpoint and all other agency routes are unaffected. The `agencyAPI.getMy()` client call in `AgencyDashboard.jsx` would now receive a 404 (since the route no longer exists), but `AgencyDashboard.jsx` itself is not in the router, so no user-facing impact.
+
+---
+
+## Phase 1 Test Checklist
+
+Use this to verify all Phase 1 fixes manually after restarting both servers.
+
+**Setup:** `cd backend && node --watch src/server.js` (or `npm run dev`) and `cd frontend && npm run dev`
+
+---
+
+### TEST P1-01 — Pipeline Kanban MRF dropdown
+
+**Steps:**
+1. Log in as `recruiter@recruitment.com` / `Admin@123`
+2. Navigate to **Recruiter → Pipeline** (sidebar)
+3. Look at the MRF dropdown in the top-right area of the page
+
+**Pass:** Dropdown shows at least one approved MRF (e.g., `MRF-2026-001 — Software Engineer`)  
+**Fail (before fix):** Dropdown only shows the placeholder "Select MRF to view pipeline" and nothing else
+
+**Additional check:**
+4. Select an MRF from the dropdown
+5. Kanban stages should appear (Sourcing, Screening, Interview, Offer, etc.)
+
+**Pass:** Stages load; candidates appear in their current stage (may be empty if no candidates have been added to the pipeline)
+
+---
+
+### TEST P1-02 — AI Screening MRF dropdown
+
+**Steps:**
+1. Log in as recruiter
+2. Navigate to **Recruiter → AI Screening** (sidebar)
+3. Look at the **MRF** dropdown in the control bar
+
+**Pass:** Dropdown shows approved MRFs  
+**Fail (before fix):** Dropdown only shows "All MRFs" and no actual options
+
+**Additional check:**
+4. Select an MRF and a Job Description (create one if none exist)
+5. Click **Run Batch Screen**
+
+**Pass:** Screening runs and results appear below  
+**Fail:** Button stays disabled (because MRF select is still empty)
+
+---
+
+### TEST P1-03 — Notifications "Mark all read"
+
+**Steps:**
+1. Log in as any user
+2. Trigger an action that generates a notification (e.g., schedule an interview as recruiter — this creates a notification)
+3. Click the **bell icon** in the top bar
+4. Confirm at least one unread notification appears (shown with a dot or count)
+5. Click **"Mark all as read"** (or the equivalent button in the notification panel)
+
+**Pass:** All notifications become read; the unread count badge disappears or goes to 0  
+**Fail (before fix):** Button appeared to do nothing, or the count didn't change
+
+**API-level check (optional):**
+- Open DevTools → Network
+- Click "Mark all read"
+- Confirm the request is `PUT /api/notifications/mark-all-read` (not `PUT /api/notifications/mark-all-read/read`)
+- Confirm response is `200 { "message": "All notifications marked as read" }`
+
+---
+
+### TEST P1-04 — Offer rejection correctness
+
+**Note:** The offer Reject button is not currently visible in the Approvals UI (only Approve is shown for offers). This test verifies the backend logic is correct and the `confirmReject` function now handles the offer type properly.
+
+**Steps (code-path verification):**
+1. Log in as MD (`md@recruitment.com` / `Admin@123`)
+2. Navigate to **Management → Approvals**
+3. If an offer is in DRAFT status, it appears in the "Offer Letter Approvals" table
+4. There is currently only an **Approve** button — this is expected
+
+**Verify the fix via API (optional, for technical testing):**
+1. Create a candidate and offer letter as recruiter
+2. Note the offer ID from the network tab when the Approvals page loads
+3. Open DevTools → Console → run:
+   ```js
+   fetch('/api/offers/<OFFER_ID>/reject', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + localStorage.getItem('token') },
+     body: JSON.stringify({ reason: 'Budget constraint' })
+   }).then(r => r.json()).then(console.log)
+   ```
+4. **Pass:** Response `{ "message": "..." }` and offer status changes to REJECTED  
+   Check in DB: the offer record shows `status: 'REJECTED'`
+
+---
+
+### TEST P1-05 — Agency backend no longer crashes
+
+**Steps:**
+1. Ensure the backend server has restarted after the fix
+2. Open DevTools → Network tab
+3. Navigate to any agency-related page: **Recruiter → Agencies**
+
+**Pass:** Agency list loads without a 500 error in the console  
+**Fail (before fix):** Any request to `GET /api/agencies/my` returned a 500 with Prisma error about missing model
+
+**Additional check — other agency routes unaffected:**
+4. Click on any agency in the list
+5. The agency detail page loads correctly
+
+**Pass:** Agency detail renders with contacts, submissions, and performance data
+
+**Confirm the removed route returns 404 (not 500):**
+6. In DevTools Console:
+   ```js
+   fetch('/api/agencies/my', {
+     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+   }).then(r => console.log(r.status))
+   ```
+7. **Pass:** Returns `404` or `403` (route not found / not authorized)  
+   **Old behavior:** Returned `500` with Prisma error
+
+---
+
 ## Infrastructure (Deployment Concerns — Not Code Changes)
 
 - [ ] **SQLite → PostgreSQL** — change `provider = "sqlite"` to `"postgresql"` in schema.prisma and update `DATABASE_URL`

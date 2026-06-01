@@ -77,7 +77,11 @@ const Approvals = () => {
     if (!rejectReason.trim()) return toast.error('Please provide a reason');
     setActing(true);
     try {
-      if (rejectModal.type === 'mrf') await mrfAPI.reject(rejectModal.id, rejectReason);
+      if (rejectModal.type === 'mrf') {
+        await mrfAPI.reject(rejectModal.id, rejectReason);
+      } else if (rejectModal.type === 'offer') {
+        await offerAPI.reject(rejectModal.id, rejectReason);
+      }
       toast.success('Rejected successfully');
       setRejectModal(null);
       setRejectReason('');

@@ -92,48 +92,10 @@ router.post('/', authenticate, authorize(...HR_ROLES), async (req, res) => {
   }
 });
 
-// Agency partner — fetch own agency + performance
-router.get('/my', authenticate, authorize('AGENCY_PARTNER'), async (req, res) => {
-  try {
-    const partner = await prisma.agencyPartner.findFirst({ where: { userId: req.user.id } });
-    if (!partner) return res.status(404).json({ message: 'No agency linked to this account' });
-
-    const agency = await prisma.agency.findFirst({
-      where: { id: partner.agencyId, deletedAt: null },
-      include: {
-        contacts: true,
-        submissions: {
-          include: { candidate: true, mrf: true },
-          orderBy: { submittedAt: 'desc' },
-          take: 20,
-        },
-      },
-    });
-    if (!agency) return res.status(404).json({ message: 'Agency not found' });
-
-    const submissions = await prisma.agencySubmission.findMany({
-      where: { agencyId: agency.id },
-      include: { candidate: { select: { status: true } } },
-    });
-    const statuses = submissions.map(s => s.candidate?.status);
-    const count = (vals) => statuses.filter(s => vals.includes(s)).length;
-    const placed = count(['OFFER_ACCEPTED', 'ONBOARDED', 'CONFIRMED']);
-    const performance = {
-      totalSubmissions: submissions.length,
-      interviewed: count(['INTERVIEW_SCHEDULED', 'INTERVIEW_COMPLETED']),
-      offered: count(['OFFER_SENT', 'OFFER_ACCEPTED']),
-      joined: count(['ONBOARDED', 'CONFIRMED']),
-      rejected: count(['REJECTED', 'OFFER_REJECTED']),
-      placed,
-      successRate: submissions.length ? Math.round((placed / submissions.length) * 100) : 0,
-    };
-
-    res.json({ agency, performance });
-  } catch (err) {
-    console.error('Get my agency:', err);
-    res.status(500).json({ message: 'Failed to fetch agency data' });
-  }
-});
+// NOTE: GET /my (agency partner self-service) was removed.
+// The AGENCY_PARTNER role and portal were retired in Session 6.
+// The AgencyPartner model was never added to the schema, so this route
+// caused a Prisma runtime crash on every request. Route removed to prevent crash.
 
 // Get agency detail
 router.get('/:id', authenticate, authorize(...HR_ROLES), async (req, res) => {
